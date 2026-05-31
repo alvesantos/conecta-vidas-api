@@ -14,6 +14,9 @@ const logger = winston.createLogger({
     new winston.transports.File({
       filename: path.resolve(process.cwd(), 'logs/app.log'),
     }),
+    ...(process.env.NODE_ENV !== 'production'
+      ? [new winston.transports.Console()]
+      : []),
   ],
 });
 
