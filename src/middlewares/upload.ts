@@ -35,5 +35,5 @@ const fileFilter = (
 export const uploadPetAvatar = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: (Number(process.env.MAX_UPLOAD_MB) || 10) * 1024 * 1024 },
 }).single('avatar');
