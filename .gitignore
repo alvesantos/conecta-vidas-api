@@ -5,3 +5,6 @@ dist/
 # Uploads gerados em produção (manter apenas a pasta, não os arquivos)
 uploads/pets/*
 !uploads/pets/.gitkeep
+
+# Logs gerados em produção
+logs/*.log

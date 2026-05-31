@@ -3,6 +3,7 @@ import { db } from '../database/knex';
 import { userService } from '../services/user.service';
 import { petService } from '../services/pet.service';
 import { subscriptionService } from '../services/subscription.service';
+import logger from '../logger';
 
 export const adminController = {
   async listUsers(_req: Request, res: Response) {
@@ -29,7 +30,8 @@ export const adminController = {
         )
         .orderBy('u.created_at', 'desc');
       res.json(rows);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao listar usuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       res.status(500).json({ error: 'Erro ao listar usuários.' });
     }
   },
@@ -41,6 +43,7 @@ export const adminController = {
       res.json(user);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao atualizar usuário.';
+      logger.error('Erro ao atualizar usuário', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, id: req.params['id'] });
       res.status(400).json({ error: message });
     }
   },
@@ -52,6 +55,7 @@ export const adminController = {
       res.status(204).end();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao excluir usuário.';
+      logger.error('Erro ao excluir usuário', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, id: req.params['id'] });
       res.status(400).json({ error: message });
     }
   },
@@ -69,6 +73,7 @@ export const adminController = {
       res.status(201).json(subscription);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao atribuir plano.';
+      logger.error('Erro ao atribuir plano ao usuário', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, userId: req.params['id'], body: req.body });
       res.status(400).json({ error: message });
     }
   },
@@ -80,6 +85,7 @@ export const adminController = {
       res.status(204).end();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao cancelar plano.';
+      logger.error('Erro ao cancelar plano do usuário', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, userId: req.params['id'] });
       res.status(400).json({ error: message });
     }
   },
@@ -88,7 +94,8 @@ export const adminController = {
     try {
       const pets = await petService.findAllWithOwner();
       res.json(pets);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao listar pets (admin)', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       res.status(500).json({ error: 'Erro ao listar pets.' });
     }
   },
@@ -98,7 +105,8 @@ export const adminController = {
       const pet = await petService.findByIdWithOwner(req.params['id'] as string);
       if (!pet) return res.status(404).json({ error: 'Pet não encontrado.' });
       res.json(pet);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao buscar pet (admin)', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, id: req.params['id'] });
       res.status(500).json({ error: 'Erro ao buscar pet.' });
     }
   },

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { petService } from '../services/pet.service';
 import type { AuthRequest } from '../middlewares/auth.middleware';
+import logger from '../logger';
 
 export const petController = {
   async create(req: AuthRequest, res: Response) {
@@ -53,6 +54,7 @@ export const petController = {
       res.status(201).json(pet);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao criar pet.';
+      logger.error('Erro ao criar pet', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, body: req.body });
       const status = message.toLowerCase().includes('limite') ? 403 : 400;
       res.status(status).json({ error: message });
     }
@@ -63,7 +65,8 @@ export const petController = {
       if (!req.userId) return res.status(401).json({ error: 'Não autenticado.' });
       const pets = await petService.findByUser(req.userId);
       res.json(pets);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao buscar pets do usuário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(500).json({ error: 'Erro ao buscar pets.' });
     }
   },
@@ -73,7 +76,8 @@ export const petController = {
       const userId = (req.params['userId'] ?? req.params['tutorId']) as string;
       const pets = await petService.findByUser(userId);
       res.json(pets);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao buscar pets por usuário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, params: req.params });
       res.status(500).json({ error: 'Erro ao buscar pets.' });
     }
   },
@@ -83,7 +87,8 @@ export const petController = {
       const pet = await petService.findById(req.params['id'] as string);
       if (!pet) return res.status(404).json({ error: 'Pet não encontrado.' });
       res.json(pet);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao buscar pet por id', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, id: req.params['id'] });
       res.status(500).json({ error: 'Erro ao buscar pet.' });
     }
   },
@@ -122,6 +127,7 @@ export const petController = {
       res.json(updated);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao atualizar pet.';
+      logger.error('Erro ao atualizar pet', { message: err instanceof Error ? err.message : message, stack: err instanceof Error ? err.stack : undefined, id: req.params['id'], body: req.body });
       res.status(400).json({ error: message });
     }
   },

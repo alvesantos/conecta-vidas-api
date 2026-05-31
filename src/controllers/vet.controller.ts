@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
+import logger from '../logger';
 
 export const vetController = {
   async createVet(req: AuthRequest, res: Response) {
@@ -48,6 +49,7 @@ export const vetController = {
       return res.status(201).json(user);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar veterinário.';
+      logger.error('Erro ao criar veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, email: req.body?.email });
       return res.status(400).json({ error: msg });
     }
   },
@@ -56,7 +58,8 @@ export const vetController = {
     try {
       const vets = await vetService.findAllVets();
       res.json(vets);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao listar veterinários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       res.status(500).json({ error: 'Erro ao listar veterinários.' });
     }
   },
@@ -66,7 +69,8 @@ export const vetController = {
       const profile = await vetService.getVetProfile(req.userId!);
       if (!profile) return res.status(404).json({ error: 'Perfil não encontrado.' });
       res.json(profile);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao buscar perfil do veterinário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(500).json({ error: 'Erro ao buscar perfil.' });
     }
   },
@@ -84,6 +88,7 @@ export const vetController = {
       res.json({ message: 'Senha alterada com sucesso.' });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao alterar senha.';
+      logger.error('Erro ao alterar senha do veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(400).json({ error: msg });
     }
   },
@@ -93,7 +98,8 @@ export const vetController = {
       const dateFilter = req.query['date'] as string | undefined;
       const consultations = await vetService.findConsultationsByVet(req.userId!, dateFilter);
       res.json(consultations);
-    } catch {
+    } catch (err) {
+      logger.error('Erro ao listar consultas do veterinário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(500).json({ error: 'Erro ao listar consultas.' });
     }
   },
@@ -110,6 +116,7 @@ export const vetController = {
       res.json(consultation);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao atualizar consulta.';
+      logger.error('Erro ao atualizar status da consulta', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, consultationId: req.params['id'], userId: req.userId });
       res.status(400).json({ error: msg });
     }
   },
@@ -124,6 +131,7 @@ export const vetController = {
       res.json(balance);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao consultar saldo.';
+      logger.error('Erro ao consultar saldo do veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(400).json({ error: msg });
     }
   },
