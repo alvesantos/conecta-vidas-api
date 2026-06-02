@@ -137,8 +137,10 @@ export const vetService = {
   },
 
   async getVetProfile(vetId: string) {
+    // Admin também pode atuar como veterinário, por isso não restringimos o type aqui.
     return db('users')
-      .where({ id: vetId, type: 'veterinario' })
+      .where({ id: vetId })
+      .whereIn('type', ['veterinario', 'admin'])
       .select(
         'id', 'name', 'cnpj', 'email', 'recipient_id',
         'pix_type', 'pix_key',

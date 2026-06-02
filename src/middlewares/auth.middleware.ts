@@ -49,7 +49,8 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
 
 export function requireVet(req: AuthRequest, res: Response, next: NextFunction) {
   requireAuth(req, res, () => {
-    if (req.userType !== 'veterinario') {
+    // O administrador também pode atuar como veterinário.
+    if (req.userType !== 'veterinario' && req.userType !== 'admin') {
       return res.status(403).json({ error: 'Acesso restrito a veterinários.' });
     }
     next();
