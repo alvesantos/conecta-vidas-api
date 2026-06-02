@@ -34,6 +34,7 @@ export const authController = {
           name: user.name,
           email: user.email,
           type: user.type,
+          crmv: user.crmv ?? null,
         },
       });
     } catch (err) {
