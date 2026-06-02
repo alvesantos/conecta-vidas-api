@@ -24,6 +24,8 @@ export const petController = {
         birth_date,
         microchipped,
         neutered,
+        weight,
+        sex,
         behavior,
         conditions,
       } = req.body as Record<string, string | boolean>;
@@ -46,6 +48,8 @@ export const petController = {
         birth_date: birth_date as string,
         microchipped: microchipped === 'true' || microchipped === true,
         neutered: neutered === 'true' || neutered === true,
+        weight: weight !== undefined && weight !== '' ? Number(weight) : undefined,
+        sex: (sex as string | undefined) || undefined,
         behavior: (behavior as string | undefined) || undefined,
         conditions: (conditions as string | undefined) || undefined,
         avatar_url,
@@ -109,9 +113,12 @@ export const petController = {
       const patch: Record<string, unknown> = {};
       for (const key of [
         'name', 'species', 'breed', 'size', 'coat', 'coat_color', 'birth_date',
-        'behavior', 'conditions',
+        'sex', 'behavior', 'conditions',
       ] as const) {
         if (body[key] !== undefined) patch[key] = body[key];
+      }
+      if (body.weight !== undefined) {
+        patch.weight = body.weight === '' || body.weight === null ? null : Number(body.weight);
       }
       if (body.microchipped !== undefined) {
         patch.microchipped = body.microchipped === true || body.microchipped === 'true';

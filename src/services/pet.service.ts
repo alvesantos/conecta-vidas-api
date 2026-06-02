@@ -11,6 +11,8 @@ export interface CreatePetDTO {
   birth_date: string;
   microchipped: boolean;
   neutered: boolean;
+  weight?: number | null;
+  sex?: string | null;
   behavior?: string;
   conditions?: string;
   avatar_url?: string;
@@ -26,6 +28,8 @@ export interface UpdatePetDTO {
   birth_date?: string;
   microchipped?: boolean;
   neutered?: boolean;
+  weight?: number | null;
+  sex?: string | null;
   behavior?: string | null;
   conditions?: string | null;
   avatar_url?: string | null;
@@ -98,7 +102,7 @@ export const petService = {
     const patch: Record<string, unknown> = {};
     for (const key of [
       'name', 'species', 'breed', 'size', 'coat', 'coat_color', 'birth_date',
-      'microchipped', 'neutered', 'behavior', 'conditions', 'avatar_url',
+      'microchipped', 'neutered', 'weight', 'sex', 'behavior', 'conditions', 'avatar_url',
     ] as const) {
       if (data[key] !== undefined) patch[key] = data[key];
     }
