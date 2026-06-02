@@ -100,6 +100,16 @@ export const adminController = {
     }
   },
 
+  async listBirthdayPets(_req: Request, res: Response) {
+    try {
+      const pets = await petService.findBirthdayPetsThisMonth();
+      res.json(pets);
+    } catch (err) {
+      logger.error('Erro ao listar pets de aniversário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
+      res.status(500).json({ error: 'Erro ao listar pets de aniversário.' });
+    }
+  },
+
   async getPet(req: Request, res: Response) {
     try {
       const pet = await petService.findByIdWithOwner(req.params['id'] as string);

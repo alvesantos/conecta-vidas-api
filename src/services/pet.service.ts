@@ -64,6 +64,17 @@ export const petService = {
     return db('pets').orderBy('created_at', 'desc');
   },
 
+  async findBirthdayPetsThisMonth() {
+    return db('pets as p')
+      .leftJoin('users as u', 'p.user_id', 'u.id')
+      .select(
+        'p.id', 'p.name', 'p.species', 'p.breed', 'p.birth_date', 'p.avatar_url',
+        'u.id as owner_id', 'u.name as owner_name', 'u.email as owner_email'
+      )
+      .whereRaw('EXTRACT(MONTH FROM p.birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)')
+      .orderByRaw('EXTRACT(DAY FROM p.birth_date)');
+  },
+
   async findAllWithOwner() {
     return db('pets as p')
       .leftJoin('users as u', 'p.user_id', 'u.id')

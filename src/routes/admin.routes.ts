@@ -15,6 +15,7 @@ router.post('/users/:id/subscription', adminController.assignUserPlan);
 router.delete('/users/:id/subscription', adminController.cancelUserPlan);
 
 router.get('/pets', adminController.listPets);
+router.get('/pets/birthdays', adminController.listBirthdayPets);
 router.get('/pets/:id', adminController.getPet);
 
 router.get('/plans', planController.listAdmin);
