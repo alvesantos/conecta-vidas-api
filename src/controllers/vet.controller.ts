@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
+import { prescriptionService } from '../services/prescription.service';
 import logger from '../logger';
 
 export const vetController = {
@@ -133,6 +134,72 @@ export const vetController = {
       const msg = err instanceof Error ? err.message : 'Erro ao consultar saldo.';
       logger.error('Erro ao consultar saldo do veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(400).json({ error: msg });
+    }
+  },
+
+  async listResponsibles(_req: AuthRequest, res: Response) {
+    try {
+      const responsibles = await prescriptionService.findResponsibles();
+      res.json(responsibles);
+    } catch (err) {
+      logger.error('Erro ao listar responsáveis', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
+      res.status(500).json({ error: 'Erro ao listar responsáveis.' });
+    }
+  },
+
+  async listResponsiblePets(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const pets = await prescriptionService.findPetsByResponsible(id);
+      res.json(pets);
+    } catch (err) {
+      logger.error('Erro ao listar animais do responsável', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, responsibleId: req.params['id'] });
+      res.status(500).json({ error: 'Erro ao listar animais.' });
+    }
+  },
+
+  async createPrescription(req: AuthRequest, res: Response) {
+    try {
+      const { user_id, pet_id, content, date } = req.body as Record<string, string>;
+      if (!user_id || !content || !date) {
+        return res.status(400).json({ error: 'Responsável, conteúdo e data são obrigatórios.' });
+      }
+      const prescription = await prescriptionService.create({
+        vet_id: req.userId!,
+        user_id,
+        pet_id: pet_id || null,
+        content,
+        date,
+      });
+      res.status(201).json(prescription);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar prescrição.';
+      logger.error('Erro ao criar prescrição', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
+      res.status(400).json({ error: msg });
+    }
+  },
+
+  async listPrescriptions(req: AuthRequest, res: Response) {
+    try {
+      const prescriptions = await prescriptionService.findByVet(req.userId!);
+      res.json(prescriptions);
+    } catch (err) {
+      logger.error('Erro ao listar prescrições', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
+      res.status(500).json({ error: 'Erro ao listar prescrições.' });
+    }
+  },
+
+  async getPrescription(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const prescription = await prescriptionService.findById(id);
+      if (!prescription || prescription.vet_id !== req.userId) {
+        return res.status(404).json({ error: 'Prescrição não encontrada.' });
+      }
+      res.json(prescription);
+    } catch (err) {
+      logger.error('Erro ao buscar prescrição', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, prescriptionId: req.params['id'] });
+      res.status(500).json({ error: 'Erro ao buscar prescrição.' });
     }
   },
 };
