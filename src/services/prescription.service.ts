@@ -71,6 +71,7 @@ export const prescriptionService = {
         'resp.email as responsible_email',
         'resp.address as responsible_address',
         'vet.name as vet_name',
+        'vet.crmv as vet_crmv',
         'p.name as pet_name',
         'p.species as pet_species',
         'p.breed as pet_breed',

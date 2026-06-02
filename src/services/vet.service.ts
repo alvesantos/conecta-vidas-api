@@ -85,6 +85,7 @@ export const vetService = {
         'bank_account_digit', 'bank_account_type', 'bank_holder_type',
         'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
         'billing_neighborhood', 'billing_city', 'billing_state',
+        'crmv',
       )
       .orderBy('created_at', 'desc');
   },
@@ -148,6 +149,7 @@ export const vetService = {
         'bank_account_digit', 'bank_account_type', 'bank_holder_type',
         'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
         'billing_neighborhood', 'billing_city', 'billing_state',
+        'crmv',
         'created_at',
       )
       .first();

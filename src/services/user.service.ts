@@ -27,6 +27,7 @@ export interface CreateUserDTO {
   billing_city?: string | null;
   billing_state?: string | null;
   recipient_id?: string | null;
+  crmv?: string | null;
 }
 
 export interface UpdateUserDTO {
@@ -48,6 +49,7 @@ const PUBLIC_COLUMNS = [
   'bank_account_digit', 'bank_account_type', 'bank_holder_type',
   'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
   'billing_neighborhood', 'billing_city', 'billing_state',
+  'crmv',
 ];
 
 export const userService = {
@@ -92,6 +94,7 @@ export const userService = {
         billing_neighborhood: data.billing_neighborhood ?? null,
         billing_city: data.billing_city ?? null,
         billing_state: data.billing_state ?? null,
+        crmv: data.crmv ?? null,
       })
       .returning(PUBLIC_COLUMNS);
 

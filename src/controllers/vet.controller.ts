@@ -9,7 +9,7 @@ export const vetController = {
   async createVet(req: AuthRequest, res: Response) {
     try {
       const {
-        name, cnpj, email, password,
+        name, cnpj, email, password, crmv,
         pix_type, pix_key,
         bank_code, bank_name, bank_agency, bank_account_number,
         bank_account_digit, bank_account_type, bank_holder_type,
@@ -37,7 +37,7 @@ export const vetController = {
 
       const user = await userService.create({
         name, email, password,
-        cnpj,
+        cnpj, crmv: crmv || null,
         type: 'veterinario',
         recipient_id: recipientId,
         pix_type, pix_key,
