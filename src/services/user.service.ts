@@ -35,6 +35,7 @@ export interface UpdateUserDTO {
   email?: string;
   address?: string | null;
   type?: UserType;
+  crmv?: string | null;
 }
 
 export interface LoginDTO {
@@ -123,6 +124,7 @@ export const userService = {
     if (data.email !== undefined) patch.email = data.email;
     if (data.address !== undefined) patch.address = data.address;
     if (data.type !== undefined) patch.type = data.type;
+    if (data.crmv !== undefined) patch.crmv = data.crmv;
 
     if (Object.keys(patch).length > 0) {
       patch.updated_at = db.fn.now();

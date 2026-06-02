@@ -54,6 +54,16 @@ export const planController = {
     }
   },
 
+  async delete(req: Request, res: Response) {
+    try {
+      await planService.delete(req.params['id'] as string);
+      res.status(204).end();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao excluir plano.';
+      res.status(400).json({ error: message });
+    }
+  },
+
   async update(req: Request, res: Response) {
     try {
       const body = req.body as UpdatePlanDTO;

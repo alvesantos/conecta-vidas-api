@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
@@ -52,6 +52,31 @@ export const vetController = {
       const msg = err instanceof Error ? err.message : 'Erro ao criar veterinário.';
       logger.error('Erro ao criar veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, email: req.body?.email });
       return res.status(400).json({ error: msg });
+    }
+  },
+
+  async updateVet(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { name, email, crmv } = (req.body ?? {}) as Record<string, string>;
+      const user = await userService.update(id, { name, email, crmv: crmv || null });
+      res.json(user);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar veterinário.';
+      logger.error('Erro ao atualizar veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, id: (req.params as { id: string }).id });
+      res.status(400).json({ error: msg });
+    }
+  },
+
+  async deleteVet(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      await userService.remove(id);
+      res.status(204).end();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao excluir veterinário.';
+      logger.error('Erro ao excluir veterinário', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, id: (req.params as { id: string }).id });
+      res.status(400).json({ error: msg });
     }
   },
 

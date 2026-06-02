@@ -69,6 +69,14 @@ export const planService = {
     return parsePerks(row);
   },
 
+  async delete(id: string) {
+    const count = await db('subscriptions').where({ plan_id: id }).count('id as cnt').first();
+    const cnt = Number((count as Record<string, unknown>)?.cnt ?? 0);
+    if (cnt > 0) throw new Error('Este plano possui assinaturas e não pode ser excluído.');
+    const deleted = await db('plans').where({ id }).delete();
+    if (deleted === 0) throw new Error('Plano não encontrado.');
+  },
+
   async update(id: string, data: UpdatePlanDTO) {
     const current = await db('plans').where({ id }).first();
     if (!current) throw new Error('Plano não encontrado.');

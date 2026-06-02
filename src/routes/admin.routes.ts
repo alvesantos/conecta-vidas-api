@@ -21,8 +21,11 @@ router.get('/pets/:id', adminController.getPet);
 router.get('/plans', planController.listAdmin);
 router.post('/plans', planController.create);
 router.put('/plans/:id', planController.update);
+router.delete('/plans/:id', planController.delete);
 
 router.get('/veterinarios', vetController.listVets);
 router.post('/veterinarios', vetController.createVet);
+router.put('/veterinarios/:id', vetController.updateVet);
+router.delete('/veterinarios/:id', vetController.deleteVet);
 
 export default router;
