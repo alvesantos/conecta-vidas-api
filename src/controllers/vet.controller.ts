@@ -229,12 +229,23 @@ export const vetController = {
     }
   },
 
-  async listMedicalRecords(req: AuthRequest, res: Response) {
+  async listMedicalRecordTutors(req: AuthRequest, res: Response) {
     try {
-      const records = await medicalRecordService.findByVet(req.userId!);
+      const records = await medicalRecordService.findTutorsByVet(req.userId!);
       res.json(records);
     } catch (err) {
-      logger.error('Erro ao listar prontuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
+      logger.error('Erro ao listar tutores de prontuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
+      res.status(500).json({ error: 'Erro ao listar tutores de prontuários.' });
+    }
+  },
+
+  async listMedicalRecordsByTutor(req: AuthRequest, res: Response) {
+    try {
+      const { tutorId } = req.params as { tutorId: string };
+      const records = await medicalRecordService.findByVetAndTutor(req.userId!, tutorId);
+      res.json(records);
+    } catch (err) {
+      logger.error('Erro ao listar prontuários do tutor', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
       res.status(500).json({ error: 'Erro ao listar prontuários.' });
     }
   },

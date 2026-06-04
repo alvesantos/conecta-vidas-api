@@ -1,21 +1,38 @@
 import { db } from '../database/knex';
 
 export const medicalRecordService = {
-  async findByVet(vetId: string) {
+  async findTutorsByVet(vetId: string) {
+    return db('medical_records as mr')
+      .join('users as tutor', 'mr.tutor_id', 'tutor.id')
+      .join('consultations as c', 'mr.consultation_id', 'c.id')
+      .where('mr.vet_id', vetId)
+      .select('tutor.id as tutor_id', 'tutor.name as tutor_name')
+      .max('c.date as last_consultation_date')
+      .groupBy('tutor.id', 'tutor.name')
+      .orderBy('last_consultation_date', 'desc');
+  },
+
+  async findByVetAndTutor(vetId: string, tutorId: string) {
     return db('medical_records as mr')
       .join('users as tutor', 'mr.tutor_id', 'tutor.id')
       .leftJoin('pets as p', 'mr.pet_id', 'p.id')
       .join('consultations as c', 'mr.consultation_id', 'c.id')
       .where('mr.vet_id', vetId)
+      .andWhere('mr.tutor_id', tutorId)
       .select(
         'mr.id',
+        'mr.content',
         'mr.created_at',
         'c.date as consultation_date',
+        'c.time as consultation_time',
+        'c.notes as consultation_notes',
         'tutor.name as tutor_name',
         'p.name as pet_name',
+        'p.species as pet_species',
+        'p.breed as pet_breed'
       )
       .orderBy('c.date', 'desc')
-      .orderBy('mr.created_at', 'desc');
+      .orderBy('c.time', 'desc');
   },
 
   async findById(id: string) {
