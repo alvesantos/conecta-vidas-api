@@ -1,0 +1,63 @@
+import { db } from '../database/knex';
+
+export interface CreateConsultationDTO {
+  vet_id?: string | null;
+  tutor_id: string;
+  pet_id?: string | null;
+  date: string;
+  time: string;
+  notes?: string;
+}
+
+export const consultationService = {
+  async create(data: CreateConsultationDTO) {
+    const [consultation] = await db('consultations').insert({
+      vet_id: data.vet_id ?? null,
+      tutor_id: data.tutor_id,
+      pet_id: data.pet_id ?? null,
+      date: data.date,
+      time: data.time,
+      notes: data.notes ?? '',
+      status: 'agendada',
+    }).returning('*');
+
+    return consultation;
+  },
+
+  async findByTutor(tutorId: string) {
+    return db('consultations as c')
+      .join('users as vet', 'c.vet_id', 'vet.id')
+      .leftJoin('pets as p', 'c.pet_id', 'p.id')
+      .where('c.tutor_id', tutorId)
+      .select(
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes',
+        'vet.name as vet_name',
+        'p.name as pet_name',
+        'c.created_at'
+      )
+      .orderBy('c.date', 'desc')
+      .orderBy('c.time', 'desc');
+  },
+
+  async findAll() {
+    return db('consultations as c')
+      .join('users as tutor', 'c.tutor_id', 'tutor.id')
+      .leftJoin('users as vet', 'c.vet_id', 'vet.id')
+      .leftJoin('pets as p', 'c.pet_id', 'p.id')
+      .select(
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.vet_id',
+        'tutor.name as tutor_name',
+        'vet.name as vet_name',
+        'p.name as pet_name',
+        'c.created_at'
+      )
+      .orderBy('c.date', 'desc')
+      .orderBy('c.time', 'desc');
+  },
+
+  async assignVet(id: string, vetId: string) {
+    return db('consultations')
+      .where({ id })
+      .update({ vet_id: vetId, updated_at: db.fn.now() });
+  }
+};
