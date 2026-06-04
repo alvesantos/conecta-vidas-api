@@ -3,6 +3,7 @@ import { db } from '../database/knex';
 import { userService } from '../services/user.service';
 import { petService } from '../services/pet.service';
 import { subscriptionService } from '../services/subscription.service';
+import { consultationService } from '../services/consultation.service';
 import logger from '../logger';
 
 export const adminController = {
@@ -120,4 +121,44 @@ export const adminController = {
       res.status(500).json({ error: 'Erro ao buscar pet.' });
     }
   },
+
+  async listConsultations(req: Request, res: Response) {
+    try {
+      const consultations = await consultationService.findAll();
+      res.json(consultations);
+    } catch (err) {
+      logger.error('Erro ao listar consultas no painel admin', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao listar consultas.' });
+    }
+  },
+
+  async assignVet(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { vet_id } = req.body as Record<string, string>;
+      if (!vet_id) return res.status(400).json({ error: 'vet_id é obrigatório' });
+      await consultationService.assignVet(id, vet_id);
+      res.json({ success: true });
+    } catch (err) {
+      logger.error('Erro ao designar veterinário', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao designar veterinário.' });
+    }
+  },
+
+  async getDashboardStats(_req: Request, res: Response) {
+    try {
+      res.json({ users: 0, subscriptions: 0 });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao buscar stats' });
+    }
+  },
+
+  async listSubscriptions(_req: Request, res: Response) {
+    try {
+      const subs = await subscriptionService.findAll();
+      res.json(subs);
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao buscar assinaturas' });
+    }
+  }
 };

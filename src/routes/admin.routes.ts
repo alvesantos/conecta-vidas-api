@@ -14,6 +14,12 @@ router.delete('/users/:id', adminController.deleteUser);
 router.post('/users/:id/subscription', adminController.assignUserPlan);
 router.delete('/users/:id/subscription', adminController.cancelUserPlan);
 
+router.get('/dashboard', adminController.getDashboardStats);
+router.get('/subscriptions', adminController.listSubscriptions);
+
+router.get('/consultations', adminController.listConsultations);
+router.patch('/consultations/:id/assign', adminController.assignVet);
+
 router.get('/pets', adminController.listPets);
 router.get('/pets/birthdays', adminController.listBirthdayPets);
 router.get('/pets/:id', adminController.getPet);
