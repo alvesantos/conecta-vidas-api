@@ -18,4 +18,8 @@ router.get('/prescriptions', vetController.listPrescriptions);
 router.post('/prescriptions', vetController.createPrescription);
 router.get('/prescriptions/:id', vetController.getPrescription);
 
+router.get('/medical-records', vetController.listMedicalRecords);
+router.get('/medical-records/:id', vetController.getMedicalRecord);
+router.put('/medical-records/:id', vetController.updateMedicalRecord);
+
 export default router;

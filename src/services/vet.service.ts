@@ -130,9 +130,25 @@ export const vetService = {
 
     if (!consultation) throw new Error('Consulta não encontrada.');
 
-    await db('consultations')
-      .where({ id: consultationId })
-      .update({ status, updated_at: db.fn.now() });
+    await db.transaction(async (trx) => {
+      await trx('consultations')
+        .where({ id: consultationId })
+        .update({ status, updated_at: db.fn.now() });
+
+      if (status === 'realizada') {
+        const existing = await trx('medical_records').where({ consultation_id: consultationId }).first();
+        if (!existing) {
+          const dateStr = consultation.date instanceof Date ? consultation.date.toISOString().slice(0, 10) : consultation.date;
+          await trx('medical_records').insert({
+            consultation_id: consultationId,
+            vet_id: vetId,
+            tutor_id: consultation.tutor_id,
+            pet_id: consultation.pet_id,
+            content: `Prontuário gerado automaticamente a partir da consulta do dia ${dateStr}\n\nObservações da consulta:\n`,
+          });
+        }
+      }
+    });
 
     return db('consultations').where({ id: consultationId }).first();
   },

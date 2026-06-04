@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middlewares/auth.middleware';
 import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
 import { prescriptionService } from '../services/prescription.service';
+import { medicalRecordService } from '../services/medical_record.service';
 import logger from '../logger';
 
 export const vetController = {
@@ -227,4 +228,44 @@ export const vetController = {
       res.status(500).json({ error: 'Erro ao buscar prescrição.' });
     }
   },
+
+  async listMedicalRecords(req: AuthRequest, res: Response) {
+    try {
+      const records = await medicalRecordService.findByVet(req.userId!);
+      res.json(records);
+    } catch (err) {
+      logger.error('Erro ao listar prontuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
+      res.status(500).json({ error: 'Erro ao listar prontuários.' });
+    }
+  },
+
+  async getMedicalRecord(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const record = await medicalRecordService.findById(id);
+      if (!record || record.vet_id !== req.userId) {
+        return res.status(404).json({ error: 'Prontuário não encontrado.' });
+      }
+      res.json(record);
+    } catch (err) {
+      logger.error('Erro ao buscar prontuário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, recordId: req.params['id'] });
+      res.status(500).json({ error: 'Erro ao buscar prontuário.' });
+    }
+  },
+
+  async updateMedicalRecord(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { content } = req.body as { content: string };
+      const record = await medicalRecordService.findById(id);
+      if (!record || record.vet_id !== req.userId) {
+        return res.status(404).json({ error: 'Prontuário não encontrado.' });
+      }
+      const updated = await medicalRecordService.updateContent(id, content);
+      res.json(updated);
+    } catch (err) {
+      logger.error('Erro ao atualizar prontuário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, recordId: req.params['id'] });
+      res.status(500).json({ error: 'Erro ao atualizar prontuário.' });
+    }
+  }
 };
