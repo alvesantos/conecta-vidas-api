@@ -51,6 +51,8 @@ export const authController = {
         cpf,
         email,
         address,
+        zip_code,
+        house_number,
         password,
         pet,
       } = req.body as Record<string, unknown>;
@@ -64,6 +66,8 @@ export const authController = {
         cpf: (cpf as string | undefined) ?? null,
         email: email as string,
         address: (address as string | undefined) ?? null,
+        zip_code: (zip_code as string | undefined) ?? null,
+        house_number: (house_number as string | undefined) ?? null,
         password: password as string,
         type: 'tutor',
       });

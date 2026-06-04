@@ -28,6 +28,8 @@ export interface CreateUserDTO {
   billing_state?: string | null;
   recipient_id?: string | null;
   crmv?: string | null;
+  zip_code?: string | null;
+  house_number?: string | null;
 }
 
 export interface UpdateUserDTO {
@@ -36,6 +38,8 @@ export interface UpdateUserDTO {
   address?: string | null;
   type?: UserType;
   crmv?: string | null;
+  zip_code?: string | null;
+  house_number?: string | null;
 }
 
 export interface LoginDTO {
@@ -50,7 +54,7 @@ const PUBLIC_COLUMNS = [
   'bank_account_digit', 'bank_account_type', 'bank_holder_type',
   'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
   'billing_neighborhood', 'billing_city', 'billing_state',
-  'crmv',
+  'crmv', 'zip_code', 'house_number',
 ];
 
 export const userService = {
@@ -96,6 +100,8 @@ export const userService = {
         billing_city: data.billing_city ?? null,
         billing_state: data.billing_state ?? null,
         crmv: data.crmv ?? null,
+        zip_code: data.zip_code ?? null,
+        house_number: data.house_number ?? null,
       })
       .returning(PUBLIC_COLUMNS);
 
@@ -125,6 +131,8 @@ export const userService = {
     if (data.address !== undefined) patch.address = data.address;
     if (data.type !== undefined) patch.type = data.type;
     if (data.crmv !== undefined) patch.crmv = data.crmv;
+    if (data.zip_code !== undefined) patch.zip_code = data.zip_code;
+    if (data.house_number !== undefined) patch.house_number = data.house_number;
 
     if (Object.keys(patch).length > 0) {
       patch.updated_at = db.fn.now();
