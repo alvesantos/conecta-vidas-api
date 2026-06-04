@@ -52,7 +52,7 @@ export const userController = {
   async listVets(_req: Request, res: Response) {
     try {
       const vets = await vetService.findAllVets();
-      const safeVets = vets.map(v => ({ id: v.id, name: v.name })); // return only id and name for public usage
+      const safeVets = vets.map(v => ({ id: v.id, name: v.name, email: v.email, crmv: v.crmv })); // return safe fields
       res.json(safeVets);
     } catch (err) {
       logger.error('Erro ao buscar veterinários', { message: err instanceof Error ? err.message : String(err) });
