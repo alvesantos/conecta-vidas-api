@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { userService } from '../services/user.service';
+import { vetService } from '../services/vet.service';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import logger from '../logger';
 
@@ -47,4 +48,15 @@ export const userController = {
       res.status(500).json({ error: 'Erro ao buscar usuário.' });
     }
   },
+
+  async listVets(_req: Request, res: Response) {
+    try {
+      const vets = await vetService.findAllVets();
+      const safeVets = vets.map(v => ({ id: v.id, name: v.name })); // return only id and name for public usage
+      res.json(safeVets);
+    } catch (err) {
+      logger.error('Erro ao buscar veterinários', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao buscar veterinários.' });
+    }
+  }
 };
