@@ -86,4 +86,12 @@ export const prescriptionService = {
       )
       .first();
   },
+
+  /** Remove uma prescrição garantindo que pertence ao veterinário informado. */
+  async remove(id: string, vetId: string) {
+    const deleted = await db('prescriptions')
+      .where({ id, vet_id: vetId })
+      .del();
+    return deleted > 0;
+  },
 };

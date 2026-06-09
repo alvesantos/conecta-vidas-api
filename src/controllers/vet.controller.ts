@@ -134,16 +134,29 @@ export const vetController = {
   async updateConsultationStatus(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
-      const { status } = req.body as { status: string };
+      const { status, notes } = req.body as { status: string; notes?: string };
       const valid = ['agendada', 'confirmada', 'realizada', 'cancelada'];
       if (!valid.includes(status)) {
         return res.status(400).json({ error: `Status inválido. Use: ${valid.join(', ')}` });
       }
-      const consultation = await vetService.updateConsultationStatus(id, req.userId!, status);
+      const consultation = await vetService.updateConsultationStatus(id, req.userId!, status, notes);
       res.json(consultation);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao atualizar consulta.';
       logger.error('Erro ao atualizar status da consulta', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, consultationId: req.params['id'], userId: req.userId });
+      res.status(400).json({ error: msg });
+    }
+  },
+
+  async saveConsultationSession(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { meet_link, notes } = req.body as { meet_link?: string; notes?: string };
+      const consultation = await vetService.saveConsultationSession(id, req.userId!, { meet_link, notes });
+      res.json(consultation);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar sessão da consulta.';
+      logger.error('Erro ao salvar sessão da consulta', { message: err instanceof Error ? err.message : msg, stack: err instanceof Error ? err.stack : undefined, consultationId: req.params['id'], userId: req.userId });
       res.status(400).json({ error: msg });
     }
   },
@@ -226,6 +239,20 @@ export const vetController = {
     } catch (err) {
       logger.error('Erro ao buscar prescrição', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, prescriptionId: req.params['id'] });
       res.status(500).json({ error: 'Erro ao buscar prescrição.' });
+    }
+  },
+
+  async deletePrescription(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const removed = await prescriptionService.remove(id, req.userId!);
+      if (!removed) {
+        return res.status(404).json({ error: 'Prescrição não encontrada.' });
+      }
+      res.status(204).end();
+    } catch (err) {
+      logger.error('Erro ao remover prescrição', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, prescriptionId: req.params['id'], userId: req.userId });
+      res.status(500).json({ error: 'Erro ao remover prescrição.' });
     }
   },
 

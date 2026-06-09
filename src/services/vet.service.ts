@@ -108,7 +108,7 @@ export const vetService = {
       .leftJoin('pets as p', 'c.pet_id', 'p.id')
       .where('c.vet_id', vetId)
       .select(
-        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes',
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
         'tutor.name as tutor_name',
         'p.name as pet_name',
         'c.created_at',
@@ -123,7 +123,28 @@ export const vetService = {
     return query;
   },
 
-  async updateConsultationStatus(consultationId: string, vetId: string, status: string) {
+  /** Salva o link da videoconferência e/ou as anotações ao vivo da consulta. */
+  async saveConsultationSession(
+    consultationId: string,
+    vetId: string,
+    data: { meet_link?: string; notes?: string },
+  ) {
+    const consultation = await db('consultations')
+      .where({ id: consultationId, vet_id: vetId })
+      .first();
+
+    if (!consultation) throw new Error('Consulta não encontrada.');
+
+    const update: Record<string, unknown> = { updated_at: db.fn.now() };
+    if (data.meet_link !== undefined) update['meet_link'] = data.meet_link;
+    if (data.notes !== undefined) update['notes'] = data.notes;
+
+    await db('consultations').where({ id: consultationId }).update(update);
+
+    return db('consultations').where({ id: consultationId }).first();
+  },
+
+  async updateConsultationStatus(consultationId: string, vetId: string, status: string, notes?: string) {
     const consultation = await db('consultations')
       .where({ id: consultationId, vet_id: vetId })
       .first();
@@ -131,20 +152,32 @@ export const vetService = {
     if (!consultation) throw new Error('Consulta não encontrada.');
 
     await db.transaction(async (trx) => {
+      const consultationUpdate: Record<string, unknown> = { status, updated_at: db.fn.now() };
+      if (notes !== undefined) consultationUpdate['notes'] = notes;
+
       await trx('consultations')
         .where({ id: consultationId })
-        .update({ status, updated_at: db.fn.now() });
+        .update(consultationUpdate);
 
       if (status === 'realizada') {
+        const dateStr = consultation.date instanceof Date ? consultation.date.toISOString().slice(0, 10) : consultation.date;
+        const sessionNotes = (notes ?? consultation.notes ?? '').trim();
+        const content =
+          `Prontuário gerado a partir da consulta do dia ${dateStr}\n\n` +
+          `Anotações da consulta:\n${sessionNotes || '(sem anotações registradas)'}`;
+
         const existing = await trx('medical_records').where({ consultation_id: consultationId }).first();
-        if (!existing) {
-          const dateStr = consultation.date instanceof Date ? consultation.date.toISOString().slice(0, 10) : consultation.date;
+        if (existing) {
+          await trx('medical_records')
+            .where({ consultation_id: consultationId })
+            .update({ content, updated_at: db.fn.now() });
+        } else {
           await trx('medical_records').insert({
             consultation_id: consultationId,
             vet_id: vetId,
             tutor_id: consultation.tutor_id,
             pet_id: consultation.pet_id,
-            content: `Prontuário gerado automaticamente a partir da consulta do dia ${dateStr}\n\nObservações da consulta:\n`,
+            content,
           });
         }
       }

@@ -30,7 +30,7 @@ export const consultationService = {
       .leftJoin('pets as p', 'c.pet_id', 'p.id')
       .where('c.tutor_id', tutorId)
       .select(
-        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes',
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
         'vet.name as vet_name',
         'p.name as pet_name',
         'c.created_at'
