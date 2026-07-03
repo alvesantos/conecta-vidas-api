@@ -58,5 +58,45 @@ export const userController = {
       logger.error('Erro ao buscar veterinários', { message: err instanceof Error ? err.message : String(err) });
       res.status(500).json({ error: 'Erro ao buscar veterinários.' });
     }
-  }
+  },
+
+  /**
+   * [Bot] Verifica se um CPF já é cadastrado. Retorna { registered, user? }
+   * com dados mínimos, sem vazar campos sensíveis.
+   */
+  async lookupByCpf(req: Request, res: Response) {
+    try {
+      const cpf = String(req.params['cpf'] ?? '');
+      if (cpf.replace(/\D/g, '').length !== 11) {
+        return res.status(400).json({ error: 'CPF inválido.' });
+      }
+      const user = await userService.findByCpf(cpf);
+      if (!user) return res.json({ registered: false });
+      res.json({
+        registered: true,
+        user: { id: user.id, name: user.name, email: user.email, phone: user.phone ?? null },
+      });
+    } catch (err) {
+      logger.error('Erro no lookup de CPF (bot)', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao consultar CPF.' });
+    }
+  },
+
+  /**
+   * [Bot] Cadastra um responsável a partir do WhatsApp (nome, CPF, telefone).
+   */
+  async registerFromWhatsApp(req: Request, res: Response) {
+    try {
+      const { name, cpf, phone, email } = req.body as Record<string, string>;
+      if (!name || !cpf || !phone) {
+        return res.status(400).json({ error: 'Nome, CPF e telefone são obrigatórios.' });
+      }
+      const user = await userService.createFromWhatsApp({ name, cpf, phone, email });
+      res.status(201).json({ registered: true, user });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao cadastrar via WhatsApp.';
+      logger.error('Erro ao cadastrar via WhatsApp (bot)', { message });
+      res.status(400).json({ error: message });
+    }
+  },
 };

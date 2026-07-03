@@ -1,6 +1,19 @@
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { db } from '../database/knex';
 import type { UserType } from '../middlewares/auth.middleware';
+
+/** Remove tudo que não for dígito. */
+function onlyDigits(value: string): string {
+  return (value ?? '').replace(/\D/g, '');
+}
+
+/** Formata 11 dígitos no padrão "xxx.xxx.xxx-xx" (formato armazenado). */
+function formatCpf(value: string): string {
+  const d = onlyDigits(value);
+  if (d.length !== 11) return value;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
 
 export interface CreateUserDTO {
   name: string;
@@ -30,6 +43,7 @@ export interface CreateUserDTO {
   crmv?: string | null;
   zip_code?: string | null;
   house_number?: string | null;
+  phone?: string | null;
 }
 
 export interface UpdateUserDTO {
@@ -54,7 +68,7 @@ const PUBLIC_COLUMNS = [
   'bank_account_digit', 'bank_account_type', 'bank_holder_type',
   'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
   'billing_neighborhood', 'billing_city', 'billing_state',
-  'crmv', 'zip_code', 'house_number',
+  'crmv', 'zip_code', 'house_number', 'phone',
 ];
 
 export const userService = {
@@ -102,10 +116,46 @@ export const userService = {
         crmv: data.crmv ?? null,
         zip_code: data.zip_code ?? null,
         house_number: data.house_number ?? null,
+        phone: data.phone ?? null,
       })
       .returning(PUBLIC_COLUMNS);
 
     return user;
+  },
+
+  /**
+   * Busca um usuário pelo CPF em qualquer formato (com ou sem máscara).
+   * Usado pelo bot do WhatsApp para descobrir se a pessoa já é cadastrada.
+   */
+  async findByCpf(cpf: string) {
+    const masked = formatCpf(cpf);
+    const digits = onlyDigits(cpf);
+    return db('users')
+      .whereIn('cpf', [masked, digits, cpf])
+      .select(PUBLIC_COLUMNS)
+      .first();
+  },
+
+  /**
+   * Cadastro simplificado via WhatsApp: recebe só nome, CPF e telefone.
+   * Como email/senha são obrigatórios no schema, gera um email placeholder
+   * e uma senha aleatória (o usuário define credenciais reais depois).
+   */
+  async createFromWhatsApp(data: { name: string; cpf: string; phone: string; email?: string | null }) {
+    const digits = onlyDigits(data.cpf);
+    if (digits.length !== 11) throw new Error('CPF inválido.');
+
+    const email = data.email?.trim() || `whatsapp+${digits}@conectavet.local`;
+    const password = randomBytes(24).toString('hex');
+
+    return this.create({
+      name: data.name,
+      cpf: formatCpf(data.cpf),
+      email,
+      phone: data.phone,
+      password,
+      type: 'tutor',
+    });
   },
 
   async findAll() {
