@@ -7,10 +7,12 @@ export interface CreateConsultationDTO {
   date: string;
   time: string;
   notes?: string;
+  is_free?: boolean;
 }
 
 export const consultationService = {
   async create(data: CreateConsultationDTO) {
+    const isFree = data.is_free ?? false;
     const [consultation] = await db('consultations').insert({
       vet_id: data.vet_id ?? null,
       tutor_id: data.tutor_id,
@@ -19,6 +21,8 @@ export const consultationService = {
       time: data.time,
       notes: data.notes ?? '',
       status: 'agendada',
+      is_free: isFree,
+      charged_value: isFree ? 0 : null,
     }).returning('*');
 
     return consultation;
@@ -31,6 +35,7 @@ export const consultationService = {
       .where('c.tutor_id', tutorId)
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
+        'c.is_free', 'c.charged_value',
         'vet.name as vet_name',
         'p.name as pet_name',
         'c.created_at'
