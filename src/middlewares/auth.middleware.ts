@@ -18,14 +18,27 @@ interface JwtPayload {
   type: UserType;
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+/**
+ * Extrai o access token: primeiro do cookie httpOnly `cv_access` (fluxo web
+ * padrão), com fallback para o header `Authorization: Bearer` (clientes não
+ * baseados em cookie, ex.: integrações/testes).
+ */
+function extractToken(req: AuthRequest): string | null {
+  const cookieToken = (req.cookies as Record<string, string> | undefined)?.cv_access;
+  if (cookieToken) return cookieToken;
 
-  if (!authHeader?.startsWith('Bearer ')) {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7);
+
+  return null;
+}
+
+export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  const token = extractToken(req);
+
+  if (!token) {
     return res.status(401).json({ error: 'Acesso não autorizado. Token não fornecido.' });
   }
-
-  const token = authHeader.slice(7);
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;

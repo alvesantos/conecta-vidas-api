@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import multer from 'multer';
 import routes from './routes';
@@ -8,8 +9,11 @@ import logger from './logger';
 
 const app = express();
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000' }));
+// `credentials: true` é obrigatório para o navegador enviar/receber os
+// cookies httpOnly de sessão. Com credenciais, o origin não pode ser '*'.
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000', credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Servir uploads (avatars de pets, etc.) como arquivos estáticos
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
