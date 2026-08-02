@@ -21,7 +21,18 @@ interface PublicUser {
   email: string;
   type: string;
   crmv?: string | null;
+  crm?: string | null;
+  status?: string;
 }
+
+type PortalKey = 'cliente' | 'medico' | 'veterinario' | 'adm';
+
+const PORTAL_ACCESS: Record<PortalKey, { label: string; types: string[] }> = {
+  cliente: { label: 'Cliente', types: ['tutor', 'admin'] },
+  medico: { label: 'Médico', types: ['medico', 'admin'] },
+  veterinario: { label: 'Veterinário', types: ['veterinario', 'admin'] },
+  adm: { label: 'Administrativo', types: ['admin'] },
+};
 
 function signAccessToken(user: { id: string; email: string; type: string }) {
   return jwt.sign(
@@ -38,6 +49,8 @@ function toPublicUser(user: Record<string, unknown>): PublicUser {
     email: user.email as string,
     type: user.type as string,
     crmv: (user.crmv as string | undefined) ?? null,
+    crm: (user.crm as string | undefined) ?? null,
+    status: (user.status as string | undefined) ?? 'active',
   };
 }
 
@@ -86,13 +99,43 @@ async function issueSession(res: Response, user: PublicUser) {
 export const authController = {
   async login(req: Request, res: Response) {
     try {
-      const { email, password } = req.body;
+      const { email, password, portal } = req.body as {
+        email?: string;
+        password?: string;
+        portal?: PortalKey;
+      };
 
       if (!email || !password) {
         return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
       }
 
       const user = await userService.login({ email, password });
+      const status = (user.status as string | undefined) ?? 'active';
+      if (status !== 'active') {
+        const codes: Record<string, string> = {
+          pending: 'ACCOUNT_PENDING',
+          rejected: 'ACCOUNT_REJECTED',
+          suspended: 'ACCOUNT_SUSPENDED',
+        };
+        return res.status(403).json({
+          error: 'Esta conta não está ativa.',
+          code: codes[status] ?? 'ACCOUNT_INACTIVE',
+          reason: user.status_reason ?? null,
+        });
+      }
+
+      if (portal) {
+        const access = PORTAL_ACCESS[portal];
+        if (!access) {
+          return res.status(400).json({ error: 'Portal inválido.' });
+        }
+        if (!access.types.includes(user.type as string)) {
+          return res.status(403).json({
+            error: `Esta conta não tem acesso ao portal ${access.label}.`,
+          });
+        }
+      }
+
       const publicUser = toPublicUser(user);
       await issueSession(res, publicUser);
 
