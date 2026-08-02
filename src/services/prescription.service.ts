@@ -37,6 +37,7 @@ export const prescriptionService = {
         pet_id: data.pet_id ?? null,
         content: data.content,
         date: data.date,
+        kind: 'veterinaria',
       })
       .returning('*');
 
@@ -48,6 +49,7 @@ export const prescriptionService = {
       .join('users as resp', 'pr.user_id', 'resp.id')
       .leftJoin('pets as p', 'pr.pet_id', 'p.id')
       .where('pr.vet_id', vetId)
+      .andWhere('pr.kind', 'veterinaria')
       .select(
         'pr.id', 'pr.content', 'pr.date', 'pr.created_at',
         'resp.name as responsible_name',
@@ -63,6 +65,7 @@ export const prescriptionService = {
       .join('users as vet', 'pr.vet_id', 'vet.id')
       .leftJoin('pets as p', 'pr.pet_id', 'p.id')
       .where('pr.id', id)
+      .andWhere('pr.kind', 'veterinaria')
       .select(
         'pr.id', 'pr.content', 'pr.date', 'pr.created_at',
         'pr.user_id', 'pr.pet_id', 'pr.vet_id',
@@ -90,7 +93,7 @@ export const prescriptionService = {
   /** Remove uma prescrição garantindo que pertence ao veterinário informado. */
   async remove(id: string, vetId: string) {
     const deleted = await db('prescriptions')
-      .where({ id, vet_id: vetId })
+      .where({ id, vet_id: vetId, kind: 'veterinaria' })
       .del();
     return deleted > 0;
   },

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev_secret';
 
-export type UserType = 'tutor' | 'admin' | 'veterinario';
+export type UserType = 'tutor' | 'admin' | 'veterinario' | 'medico';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -16,6 +16,7 @@ interface JwtPayload {
   id: string;
   email: string;
   type: UserType;
+  status?: 'pending' | 'active' | 'rejected' | 'suspended';
 }
 
 /**
@@ -42,6 +43,11 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    // Tokens emitidos antes da introdução do status não possuem esse campo e
+    // continuam válidos até expirarem. Tokens novos só operam quando ativos.
+    if (payload.status && payload.status !== 'active') {
+      return res.status(403).json({ error: 'Esta conta não está ativa.' });
+    }
     req.userId = payload.id;
     req.userType = payload.type;
     req.tutorId = payload.id;
@@ -65,6 +71,15 @@ export function requireVet(req: AuthRequest, res: Response, next: NextFunction) 
     // O administrador também pode atuar como veterinário.
     if (req.userType !== 'veterinario' && req.userType !== 'admin') {
       return res.status(403).json({ error: 'Acesso restrito a veterinários.' });
+    }
+    next();
+  });
+}
+
+export function requireMedico(req: AuthRequest, res: Response, next: NextFunction) {
+  requireAuth(req, res, () => {
+    if (req.userType !== 'medico' && req.userType !== 'admin') {
+      return res.status(403).json({ error: 'Acesso restrito a médicos.' });
     }
     next();
   });

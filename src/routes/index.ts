@@ -9,6 +9,7 @@ import adminRoutes from "./admin.routes";
 import webhookRoutes from "./webhook.routes";
 import vetRoutes from "./vet.routes";
 import consultationRoutes from "./consultation.routes";
+import medicoRoutes from "./medico.routes";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use("/subscriptions", subscriptionRoutes);
 router.use("/admin", adminRoutes);
 router.use("/webhooks", webhookRoutes);
 router.use("/vet", vetRoutes);
+router.use("/medico", medicoRoutes);
 router.use("/consultations", consultationRoutes);
 
 export default router;

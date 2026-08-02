@@ -34,9 +34,9 @@ const PORTAL_ACCESS: Record<PortalKey, { label: string; types: string[] }> = {
   adm: { label: 'Administrativo', types: ['admin'] },
 };
 
-function signAccessToken(user: { id: string; email: string; type: string }) {
+function signAccessToken(user: { id: string; email: string; type: string; status?: string }) {
   return jwt.sign(
-    { id: user.id, email: user.email, type: user.type },
+    { id: user.id, email: user.email, type: user.type, status: user.status ?? 'active' },
     JWT_SECRET,
     { expiresIn: ACCESS_TOKEN_TTL } as jwt.SignOptions
   );
@@ -227,6 +227,11 @@ export const authController = {
       }
 
       const publicUser = toPublicUser(user);
+      if (publicUser.status !== 'active') {
+        await refreshTokenService.revokeById(valid.id);
+        clearAuthCookies(res);
+        return res.status(403).json({ error: 'Esta conta não está ativa.' });
+      }
       const accessToken = signAccessToken(publicUser);
       const rotated = await refreshTokenService.rotate(valid.id, valid.userId);
       setAuthCookies(res, accessToken, rotated.raw, rotated.expiresAt);

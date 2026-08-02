@@ -107,6 +107,7 @@ export const vetService = {
       .join('users as tutor', 'c.tutor_id', 'tutor.id')
       .leftJoin('pets as p', 'c.pet_id', 'p.id')
       .where('c.vet_id', vetId)
+      .andWhere('c.kind', 'veterinaria')
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
         'tutor.name as tutor_name',
@@ -130,7 +131,7 @@ export const vetService = {
     data: { meet_link?: string; notes?: string },
   ) {
     const consultation = await db('consultations')
-      .where({ id: consultationId, vet_id: vetId })
+      .where({ id: consultationId, vet_id: vetId, kind: 'veterinaria' })
       .first();
 
     if (!consultation) throw new Error('Consulta não encontrada.');
@@ -146,7 +147,7 @@ export const vetService = {
 
   async updateConsultationStatus(consultationId: string, vetId: string, status: string, notes?: string) {
     const consultation = await db('consultations')
-      .where({ id: consultationId, vet_id: vetId })
+      .where({ id: consultationId, vet_id: vetId, kind: 'veterinaria' })
       .first();
 
     if (!consultation) throw new Error('Consulta não encontrada.');
