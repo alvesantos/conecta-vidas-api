@@ -204,6 +204,60 @@ export const authController = {
     }
   },
 
+  async registerProfessional(req: Request, res: Response) {
+    try {
+      const {
+        type, name, cpf, email, phone, password, crm, crmv,
+        address, zip_code, house_number,
+      } = req.body as Record<string, string>;
+
+      if (type !== 'medico' && type !== 'veterinario') {
+        return res.status(400).json({ error: 'Tipo profissional inválido.' });
+      }
+      if (!name || !cpf || !email || !phone || !password) {
+        return res.status(400).json({
+          error: 'Nome, CPF, e-mail, telefone e senha são obrigatórios.',
+        });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
+      }
+      if (type === 'medico' && !crm) {
+        return res.status(400).json({ error: 'CRM é obrigatório para médicos.' });
+      }
+      if (type === 'veterinario' && !crmv) {
+        return res.status(400).json({ error: 'CRMV é obrigatório para veterinários.' });
+      }
+
+      await userService.create({
+        type,
+        name,
+        cpf,
+        email,
+        phone,
+        password,
+        crm: type === 'medico' ? crm : null,
+        crmv: type === 'veterinario' ? crmv : null,
+        address: address || null,
+        zip_code: zip_code || null,
+        house_number: house_number || null,
+        status: 'pending',
+      });
+
+      return res.status(201).json({
+        message: 'Cadastro recebido e enviado para análise.',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao criar cadastro profissional.';
+      logger.error('Erro ao registrar profissional', {
+        message,
+        stack: err instanceof Error ? err.stack : undefined,
+        email: req.body?.email,
+      });
+      return res.status(400).json({ error: message });
+    }
+  },
+
   /**
    * Renova a sessão a partir do refresh token (cookie httpOnly).
    * Faz rotação: o token usado é revogado e um novo é emitido.
