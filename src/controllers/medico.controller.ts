@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { medicoService } from '../services/medico.service';
 import logger from '../logger';
+import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const medicoController = {
   async getProfile(req: AuthRequest, res: Response) {
@@ -49,6 +50,63 @@ export const medicoController = {
         userId: req.userId,
       });
       return res.status(500).json({ error: 'Erro ao listar consultas.' });
+    }
+  },
+
+  async listRecords(req: AuthRequest, res: Response) {
+    try {
+      const records = await medicoService.findHumanRecords(req.userId!);
+      await logClinicalAccess({
+        actorUserId: req.userId!, action: 'list', resourceType: 'clinical_record', context: 'humano',
+      });
+      return res.json(records);
+    } catch (err) {
+      logger.error('Erro ao listar prontuários humanos', { message: err instanceof Error ? err.message : String(err), userId: req.userId });
+      return res.status(500).json({ error: 'Erro ao listar prontuários.' });
+    }
+  },
+
+  async getRecord(req: AuthRequest, res: Response) {
+    try {
+      const patientId = req.params['patientId'] as string;
+      const record = await medicoService.findHumanRecord(req.userId!, patientId);
+      if (!record) return res.status(404).json({ error: 'Prontuário não encontrado.' });
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: patientId, action: 'read',
+        resourceType: 'clinical_record', resourceId: record.id, context: 'humano',
+      });
+      return res.json(record);
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao buscar prontuário.' });
+    }
+  },
+
+  async listPrescriptions(req: AuthRequest, res: Response) {
+    try {
+      const rows = await medicoService.findHumanPrescriptions(req.userId!);
+      await logClinicalAccess({
+        actorUserId: req.userId!, action: 'list', resourceType: 'prescription', context: 'humano',
+      });
+      return res.json(rows);
+    } catch {
+      return res.status(500).json({ error: 'Erro ao listar receitas.' });
+    }
+  },
+
+  async createPrescription(req: AuthRequest, res: Response) {
+    try {
+      const { patient_id, content, date } = req.body as Record<string, string>;
+      if (!patient_id || !content?.trim() || !date) {
+        return res.status(400).json({ error: 'Paciente, conteúdo e data são obrigatórios.' });
+      }
+      const prescription = await medicoService.createHumanPrescription(req.userId!, patient_id, content, date);
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: patient_id, action: 'create',
+        resourceType: 'prescription', resourceId: prescription.id, context: 'humano',
+      });
+      return res.status(201).json(prescription);
+    } catch (err) {
+      return res.status(400).json({ error: err instanceof Error ? err.message : 'Erro ao emitir receita.' });
     }
   },
 };

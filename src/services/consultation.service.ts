@@ -8,6 +8,7 @@ export interface CreateConsultationDTO {
   time: string;
   notes?: string;
   is_free?: boolean;
+  kind: 'humana' | 'veterinaria';
 }
 
 export const consultationService = {
@@ -23,6 +24,7 @@ export const consultationService = {
       status: 'agendada',
       is_free: isFree,
       charged_value: isFree ? 0 : null,
+      kind: data.kind,
     }).returning('*');
 
     return consultation;

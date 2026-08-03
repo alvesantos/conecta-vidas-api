@@ -3,18 +3,35 @@ import type { AuthRequest } from '../middlewares/auth.middleware';
 import { consultationService } from '../services/consultation.service';
 import { planEntitlementService } from '../services/planEntitlement.service';
 import logger from '../logger';
+import { db } from '../database/knex';
+import { contextFromPetId } from '../utils/clinicalContext';
 
 export const consultationController = {
   async createConsultation(req: AuthRequest, res: Response) {
     try {
-      const { pet_id, date, time, notes } = req.body as Record<string, string>;
+      const { pet_id, kind, date, time, notes } = req.body as Record<string, string>;
       if (!date || !time) {
         return res.status(400).json({ error: 'Data e horário são obrigatórios.' });
+      }
+      const resolvedKind = contextFromPetId(pet_id);
+      if (kind && kind !== resolvedKind) {
+        return res.status(400).json({
+          error: kind === 'veterinaria'
+            ? 'Selecione um pet para a consulta veterinária.'
+            : 'Consultas humanas não podem ser vinculadas a um pet.',
+        });
       }
 
       // Regra de plano decidida no backend (fonte da verdade): se ainda há
       // cota gratuita no mês, esta consulta é registrada como gratuita.
       const entitlement = await planEntitlementService.getForUser(req.userId!);
+      if (pet_id) {
+        const ownedPet = await db('pets')
+          .where({ id: pet_id, user_id: req.userId! })
+          .whereNull('deleted_at')
+          .first();
+        if (!ownedPet) return res.status(400).json({ error: 'Pet inválido para este usuário.' });
+      }
 
       const consultation = await consultationService.create({
         tutor_id: req.userId!,
@@ -24,6 +41,7 @@ export const consultationController = {
         time,
         notes,
         is_free: entitlement.isNextConsultationFree,
+        kind: resolvedKind,
       });
 
       res.status(201).json({ ...consultation, entitlement });

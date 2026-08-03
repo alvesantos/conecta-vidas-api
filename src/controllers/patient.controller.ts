@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { db } from '../database/knex';
 import logger from '../logger';
+import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const patientController = {
   async records(req: AuthRequest, res: Response) {
@@ -15,6 +16,14 @@ export const patientController = {
           'p.name as pet_name',
         )
         .orderBy('cr.created_at', 'asc');
+      await Promise.all(
+        (records as Array<{ id: string; kind: 'humano' | 'veterinario' }>).map(record =>
+          logClinicalAccess({
+            actorUserId: req.userId!, patientUserId: req.userId!, action: 'read',
+            resourceType: 'clinical_record', resourceId: record.id, context: record.kind,
+          }),
+        ),
+      );
       return res.json(records);
     } catch (err) {
       logger.error('Erro ao listar prontuários do paciente', {
@@ -36,6 +45,15 @@ export const patientController = {
           'professional.name as professional_name', 'p.name as pet_name',
         )
         .orderBy('pr.date', 'desc');
+      await Promise.all(
+        (prescriptions as Array<{ id: string; kind: 'humana' | 'veterinaria' }>).map(item =>
+          logClinicalAccess({
+            actorUserId: req.userId!, patientUserId: req.userId!, action: 'read',
+            resourceType: 'prescription', resourceId: item.id,
+            context: item.kind === 'humana' ? 'humano' : 'veterinario',
+          }),
+        ),
+      );
       return res.json(prescriptions);
     } catch (err) {
       logger.error('Erro ao listar receitas do paciente', {

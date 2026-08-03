@@ -6,6 +6,8 @@ export const medicalRecordService = {
       .join('users as tutor', 'mr.tutor_id', 'tutor.id')
       .join('consultations as c', 'mr.consultation_id', 'c.id')
       .where('mr.vet_id', vetId)
+      .andWhere('c.kind', 'veterinaria')
+      .whereNotNull('mr.pet_id')
       .select('tutor.id as tutor_id', 'tutor.name as tutor_name')
       .max('c.date as last_consultation_date')
       .groupBy('tutor.id', 'tutor.name')
@@ -19,6 +21,8 @@ export const medicalRecordService = {
       .join('consultations as c', 'mr.consultation_id', 'c.id')
       .where('mr.vet_id', vetId)
       .andWhere('mr.tutor_id', tutorId)
+      .andWhere('c.kind', 'veterinaria')
+      .whereNotNull('mr.pet_id')
       .select(
         'mr.id',
         'mr.content',
@@ -42,8 +46,10 @@ export const medicalRecordService = {
       .leftJoin('pets as p', 'mr.pet_id', 'p.id')
       .join('consultations as c', 'mr.consultation_id', 'c.id')
       .where('mr.id', id)
+      .andWhere('c.kind', 'veterinaria')
+      .whereNotNull('mr.pet_id')
       .select(
-        'mr.id', 'mr.content', 'mr.created_at',
+        'mr.id', 'mr.tutor_id', 'mr.pet_id', 'mr.content', 'mr.created_at',
         'c.date as consultation_date',
         'tutor.name as tutor_name',
         'tutor.cpf as tutor_cpf',

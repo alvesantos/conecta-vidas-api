@@ -189,6 +189,7 @@ export const authController = {
         birth_date,
         biological_sex,
         password,
+        privacy_consent,
         pet,
       } = req.body as Record<string, unknown>;
 
@@ -199,6 +200,11 @@ export const authController = {
       ) {
         return res.status(400).json({
           error: 'Preencha todos os dados pessoais e os campos obrigatórios do endereço.',
+        });
+      }
+      if (privacy_consent !== true) {
+        return res.status(400).json({
+          error: 'O consentimento para tratamento de dados é obrigatório.',
         });
       }
 
@@ -274,6 +280,20 @@ export const authController = {
           comorbidities: (health.comorbidities as string | undefined) || null,
           continuous_medications: (health.continuous_medications as string | undefined) || null,
         });
+        await trx('user_consents').insert([
+          {
+            user_id: createdUser.id,
+            consent_type: 'privacy_and_health_data',
+            policy_version: '2026-08-03',
+            source: 'cadastro_web',
+          },
+          {
+            user_id: createdUser.id,
+            consent_type: 'platform_terms',
+            policy_version: '2026-08-03',
+            source: 'cadastro_web',
+          },
+        ]);
 
         if (pet && typeof pet === 'object') {
           const petData = pet as Record<string, unknown>;

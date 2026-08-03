@@ -4,6 +4,7 @@ import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
 import { prescriptionService } from '../services/prescription.service';
 import { medicalRecordService } from '../services/medical_record.service';
+import { logClinicalAccess } from '../services/clinicalAudit.service';
 import logger from '../logger';
 
 export const vetController = {
@@ -259,6 +260,9 @@ export const vetController = {
   async listMedicalRecordTutors(req: AuthRequest, res: Response) {
     try {
       const records = await medicalRecordService.findTutorsByVet(req.userId!);
+      await logClinicalAccess({
+        actorUserId: req.userId!, action: 'list', resourceType: 'medical_record', context: 'veterinario',
+      });
       res.json(records);
     } catch (err) {
       logger.error('Erro ao listar tutores de prontuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
@@ -270,6 +274,10 @@ export const vetController = {
     try {
       const { tutorId } = req.params as { tutorId: string };
       const records = await medicalRecordService.findByVetAndTutor(req.userId!, tutorId);
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: tutorId, action: 'list',
+        resourceType: 'medical_record', context: 'veterinario',
+      });
       res.json(records);
     } catch (err) {
       logger.error('Erro ao listar prontuários do tutor', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, userId: req.userId });
@@ -284,6 +292,10 @@ export const vetController = {
       if (!record || record.vet_id !== req.userId) {
         return res.status(404).json({ error: 'Prontuário não encontrado.' });
       }
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: record.tutor_id, action: 'read',
+        resourceType: 'medical_record', resourceId: id, context: 'veterinario',
+      });
       res.json(record);
     } catch (err) {
       logger.error('Erro ao buscar prontuário', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, recordId: req.params['id'] });
