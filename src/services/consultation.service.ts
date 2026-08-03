@@ -35,7 +35,7 @@ export const consultationService = {
       .where('c.tutor_id', tutorId)
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
-        'c.is_free', 'c.charged_value', 'c.kind',
+        'c.is_free', 'c.charged_value', 'c.kind', 'c.pet_id',
         'vet.name as vet_name',
         'p.name as pet_name',
         'c.created_at'

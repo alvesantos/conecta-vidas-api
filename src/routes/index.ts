@@ -10,6 +10,7 @@ import webhookRoutes from "./webhook.routes";
 import vetRoutes from "./vet.routes";
 import consultationRoutes from "./consultation.routes";
 import medicoRoutes from "./medico.routes";
+import patientRoutes from "./patient.routes";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/webhooks", webhookRoutes);
 router.use("/vet", vetRoutes);
 router.use("/medico", medicoRoutes);
 router.use("/consultations", consultationRoutes);
+router.use("/patient", patientRoutes);
 
 export default router;
