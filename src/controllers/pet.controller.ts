@@ -138,4 +138,23 @@ export const petController = {
       res.status(400).json({ error: message });
     }
   },
+
+  async remove(req: AuthRequest, res: Response) {
+    try {
+      const id = req.params['id'] as string;
+      const existing = await petService.findById(id);
+      if (!existing) return res.status(404).json({ error: 'Pet não encontrado.' });
+
+      if (existing.user_id !== req.userId && req.userType !== 'admin') {
+        return res.status(403).json({ error: 'Sem permissão para excluir este pet.' });
+      }
+
+      await petService.remove(id);
+      return res.status(204).send();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao excluir pet.';
+      logger.error('Erro ao excluir pet', { message, petId: req.params['id'], userId: req.userId });
+      return res.status(400).json({ error: message });
+    }
+  },
 };

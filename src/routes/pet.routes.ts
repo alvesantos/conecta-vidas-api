@@ -12,5 +12,6 @@ router.get('/user/:userId', petController.findByUser);
 router.get('/tutor/:tutorId', petController.findByUser);
 router.get('/:id', petController.findById);
 router.put('/:id', requireAuth, uploadPetAvatar, petController.update);
+router.delete('/:id', requireAuth, petController.remove);
 
 export default router;

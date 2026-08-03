@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { db } from '../database/knex';
+import type { Knex } from 'knex';
 import type { UserType } from '../middlewares/auth.middleware';
 
 /** Remove tudo que não for dígito. */
@@ -83,10 +84,10 @@ const PUBLIC_COLUMNS = [
 ];
 
 export const userService = {
-  async create(data: CreateUserDTO) {
+  async create(data: CreateUserDTO, connection: Knex | Knex.Transaction = db) {
     const normalizedCpf = data.cpf ? onlyDigits(data.cpf) : null;
     const normalizedEmail = data.email.trim().toLowerCase();
-    const conflict = await db('users')
+    const conflict = await connection('users')
       .whereRaw('LOWER(email) = ?', [normalizedEmail])
       .modify((qb) => {
         if (normalizedCpf) {
@@ -102,7 +103,7 @@ export const userService = {
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    const [user] = await db('users')
+    const [user] = await connection('users')
       .insert({
         name: data.name,
         cpf: normalizedCpf,

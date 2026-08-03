@@ -1,12 +1,13 @@
 import { db } from '../database/knex';
+import type { Knex } from 'knex';
 
 export interface CreatePetDTO {
   user_id: string;
   name: string;
   species: string;
   breed: string;
-  size: string;
-  coat: string;
+  size?: string | null;
+  coat?: string | null;
   coat_color?: string;
   birth_date: string;
   microchipped: boolean;
@@ -37,31 +38,39 @@ export interface UpdatePetDTO {
 
 const MAX_PETS_PER_USER = 5;
 
-async function countUserPets(userId: string): Promise<number> {
-  const [{ count }] = await db('pets').where({ user_id: userId }).count<{ count: string }[]>('id as count');
+async function countUserPets(userId: string, connection: Knex | Knex.Transaction = db): Promise<number> {
+  const [{ count }] = await connection('pets')
+    .where({ user_id: userId })
+    .whereNull('deleted_at')
+    .count<{ count: string }[]>('id as count');
   return Number(count ?? 0);
 }
 
 export const petService = {
-  async create(data: CreatePetDTO) {
-    const owner = await db('users').where({ id: data.user_id }).first();
+  async create(data: CreatePetDTO, connection: Knex | Knex.Transaction = db) {
+    const owner = await connection('users').where({ id: data.user_id }).first();
     if (!owner) throw new Error('Tutor não encontrado.');
 
-    const current = await countUserPets(data.user_id);
+    const current = await countUserPets(data.user_id, connection);
     if (current >= MAX_PETS_PER_USER) {
       throw new Error(`Limite de ${MAX_PETS_PER_USER} pets atingido.`);
     }
 
-    const [pet] = await db('pets').insert(data).returning('*');
+    const [pet] = await connection('pets').insert(data).returning('*');
+    await connection('clinical_records').insert({
+      user_id: data.user_id,
+      pet_id: pet.id,
+      kind: 'veterinario',
+    });
     return pet;
   },
 
   async findByUser(userId: string) {
-    return db('pets').where({ user_id: userId }).orderBy('created_at', 'desc');
+    return db('pets').where({ user_id: userId }).whereNull('deleted_at').orderBy('created_at', 'desc');
   },
 
   async findAll() {
-    return db('pets').orderBy('created_at', 'desc');
+    return db('pets').whereNull('deleted_at').orderBy('created_at', 'desc');
   },
 
   async findBirthdayPetsThisMonth() {
@@ -71,6 +80,7 @@ export const petService = {
         'p.id', 'p.name', 'p.species', 'p.breed', 'p.birth_date', 'p.avatar_url',
         'u.id as owner_id', 'u.name as owner_name', 'u.email as owner_email'
       )
+      .whereNull('p.deleted_at')
       .whereRaw('EXTRACT(MONTH FROM p.birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)')
       .orderByRaw('EXTRACT(DAY FROM p.birth_date)');
   },
@@ -84,17 +94,19 @@ export const petService = {
         'u.name as owner_name',
         'u.email as owner_email'
       )
+      .whereNull('p.deleted_at')
       .orderBy('p.created_at', 'desc');
   },
 
   async findById(id: string) {
-    return db('pets').where({ id }).first();
+    return db('pets').where({ id }).whereNull('deleted_at').first();
   },
 
   async findByIdWithOwner(id: string) {
     return db('pets as p')
       .leftJoin('users as u', 'p.user_id', 'u.id')
       .where('p.id', id)
+      .whereNull('p.deleted_at')
       .select(
         'p.*',
         'u.id as owner_id',
@@ -127,7 +139,10 @@ export const petService = {
   },
 
   async remove(id: string) {
-    const deleted = await db('pets').where({ id }).delete();
+    const deleted = await db('pets')
+      .where({ id })
+      .whereNull('deleted_at')
+      .update({ deleted_at: db.fn.now(), updated_at: db.fn.now() });
     if (deleted === 0) throw new Error('Pet não encontrado.');
   },
 };

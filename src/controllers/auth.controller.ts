@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { userService } from '../services/user.service';
 import { petService } from '../services/pet.service';
 import { refreshTokenService } from '../services/refreshToken.service';
+import { db } from '../database/knex';
 import logger from '../logger';
 
 function isValidEmail(value: string): boolean {
@@ -230,41 +231,71 @@ export const authController = {
         return res.status(400).json({ error: 'Data de nascimento ou sexo biológico inválido.' });
       }
 
-      const user = await userService.create({
-        name: name as string,
-        cpf: (cpf as string | undefined) ?? null,
-        email: email as string,
-        address: (address as string | undefined) ?? null,
-        zip_code: (zip_code as string | undefined) ?? null,
-        house_number: (house_number as string | undefined) ?? null,
-        address_complement: (address_complement as string | undefined) ?? null,
-        address_neighborhood: address_neighborhood as string,
-        address_city: address_city as string,
-        address_state: String(address_state).toUpperCase(),
-        phone: (phone as string | undefined) ?? null,
-        birth_date: (birth_date as string | undefined) ?? null,
-        biological_sex: (biological_sex as 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | undefined) ?? null,
-        password: password as string,
-        type: 'tutor',
-      });
-
       if (pet && typeof pet === 'object') {
         const petData = pet as Record<string, unknown>;
-        await petService.create({
-          user_id: user.id,
-          name: petData.name as string,
-          species: petData.species as string,
-          breed: petData.breed as string,
-          size: petData.size as string,
-          coat: petData.coat as string,
-          coat_color: (petData.coat_color as string | undefined) || undefined,
-          birth_date: petData.birth_date as string,
-          microchipped: petData.microchipped === true || petData.microchipped === 'true',
-          neutered: petData.neutered === true || petData.neutered === 'true',
-          behavior: (petData.behavior as string | undefined) || undefined,
-          conditions: (petData.conditions as string | undefined) || undefined,
-        });
+        if (!petData.name || !petData.species || !petData.breed || !petData.birth_date) {
+          return res.status(400).json({
+            error: 'Nome, espécie, raça e data de nascimento do pet são obrigatórios.',
+          });
+        }
       }
+
+      const health = (
+        req.body.health && typeof req.body.health === 'object'
+          ? req.body.health
+          : {}
+      ) as Record<string, unknown>;
+
+      const user = await db.transaction(async (trx) => {
+        const createdUser = await userService.create({
+          name: name as string,
+          cpf: (cpf as string | undefined) ?? null,
+          email: email as string,
+          address: (address as string | undefined) ?? null,
+          zip_code: (zip_code as string | undefined) ?? null,
+          house_number: (house_number as string | undefined) ?? null,
+          address_complement: (address_complement as string | undefined) ?? null,
+          address_neighborhood: address_neighborhood as string,
+          address_city: address_city as string,
+          address_state: String(address_state).toUpperCase(),
+          phone: (phone as string | undefined) ?? null,
+          birth_date: (birth_date as string | undefined) ?? null,
+          biological_sex: (biological_sex as 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | undefined) ?? null,
+          password: password as string,
+          type: 'tutor',
+        }, trx);
+
+        await trx('clinical_records').insert({
+          user_id: createdUser.id,
+          pet_id: null,
+          kind: 'humano',
+          blood_type: (health.blood_type as string | undefined) || null,
+          allergies: (health.allergies as string | undefined) || null,
+          comorbidities: (health.comorbidities as string | undefined) || null,
+          continuous_medications: (health.continuous_medications as string | undefined) || null,
+        });
+
+        if (pet && typeof pet === 'object') {
+          const petData = pet as Record<string, unknown>;
+          await petService.create({
+            user_id: createdUser.id,
+            name: petData.name as string,
+            species: petData.species as string,
+            breed: petData.breed as string,
+            size: (petData.size as string | undefined) || null,
+            coat: (petData.coat as string | undefined) || null,
+            coat_color: (petData.coat_color as string | undefined) || undefined,
+            birth_date: petData.birth_date as string,
+            microchipped: petData.microchipped === true || petData.microchipped === 'true',
+            neutered: petData.neutered === true || petData.neutered === 'true',
+            behavior: (petData.behavior as string | undefined) || undefined,
+            conditions: (petData.conditions as string | undefined) || undefined,
+          }, trx);
+
+        }
+
+        return createdUser;
+      });
 
       const publicUser = toPublicUser(user);
       await issueSession(res, publicUser);
