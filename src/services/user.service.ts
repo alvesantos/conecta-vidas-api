@@ -46,6 +46,8 @@ export interface CreateUserDTO {
   zip_code?: string | null;
   house_number?: string | null;
   phone?: string | null;
+  birth_date?: string | null;
+  biological_sex?: 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | null;
 }
 
 export interface UpdateUserDTO {
@@ -57,6 +59,9 @@ export interface UpdateUserDTO {
   crm?: string | null;
   zip_code?: string | null;
   house_number?: string | null;
+  phone?: string | null;
+  birth_date?: string | null;
+  biological_sex?: 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | null;
 }
 
 export interface LoginDTO {
@@ -72,7 +77,7 @@ const PUBLIC_COLUMNS = [
   'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
   'billing_neighborhood', 'billing_city', 'billing_state',
   'crmv', 'crm', 'status', 'status_reason', 'reviewed_by', 'reviewed_at',
-  'zip_code', 'house_number', 'phone',
+  'zip_code', 'house_number', 'phone', 'birth_date', 'biological_sex',
 ];
 
 export const userService = {
@@ -123,6 +128,8 @@ export const userService = {
         zip_code: data.zip_code ?? null,
         house_number: data.house_number ?? null,
         phone: data.phone ?? null,
+        birth_date: data.birth_date ?? null,
+        biological_sex: data.biological_sex ?? null,
       })
       .returning(PUBLIC_COLUMNS);
 
@@ -190,6 +197,9 @@ export const userService = {
     if (data.crm !== undefined) patch.crm = data.crm;
     if (data.zip_code !== undefined) patch.zip_code = data.zip_code;
     if (data.house_number !== undefined) patch.house_number = data.house_number;
+    if (data.phone !== undefined) patch.phone = data.phone;
+    if (data.birth_date !== undefined) patch.birth_date = data.birth_date;
+    if (data.biological_sex !== undefined) patch.biological_sex = data.biological_sex;
 
     if (Object.keys(patch).length > 0) {
       patch.updated_at = db.fn.now();

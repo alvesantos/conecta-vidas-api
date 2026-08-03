@@ -156,6 +156,9 @@ export const authController = {
         address,
         zip_code,
         house_number,
+        phone,
+        birth_date,
+        biological_sex,
         password,
         pet,
       } = req.body as Record<string, unknown>;
@@ -171,6 +174,9 @@ export const authController = {
         address: (address as string | undefined) ?? null,
         zip_code: (zip_code as string | undefined) ?? null,
         house_number: (house_number as string | undefined) ?? null,
+        phone: (phone as string | undefined) ?? null,
+        birth_date: (birth_date as string | undefined) ?? null,
+        biological_sex: (biological_sex as 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | undefined) ?? null,
         password: password as string,
         type: 'tutor',
       });

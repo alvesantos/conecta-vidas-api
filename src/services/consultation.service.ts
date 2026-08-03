@@ -30,12 +30,12 @@ export const consultationService = {
 
   async findByTutor(tutorId: string) {
     return db('consultations as c')
-      .join('users as vet', 'c.vet_id', 'vet.id')
+      .leftJoin('users as vet', 'c.vet_id', 'vet.id')
       .leftJoin('pets as p', 'c.pet_id', 'p.id')
       .where('c.tutor_id', tutorId)
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
-        'c.is_free', 'c.charged_value',
+        'c.is_free', 'c.charged_value', 'c.kind',
         'vet.name as vet_name',
         'p.name as pet_name',
         'c.created_at'
