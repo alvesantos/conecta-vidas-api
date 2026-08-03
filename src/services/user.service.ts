@@ -8,13 +8,6 @@ function onlyDigits(value: string): string {
   return (value ?? '').replace(/\D/g, '');
 }
 
-/** Formata 11 dígitos no padrão "xxx.xxx.xxx-xx" (formato armazenado). */
-function formatCpf(value: string): string {
-  const d = onlyDigits(value);
-  if (d.length !== 11) return value;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-
 export interface CreateUserDTO {
   name: string;
   cpf?: string | null;
@@ -91,10 +84,14 @@ const PUBLIC_COLUMNS = [
 
 export const userService = {
   async create(data: CreateUserDTO) {
+    const normalizedCpf = data.cpf ? onlyDigits(data.cpf) : null;
+    const normalizedEmail = data.email.trim().toLowerCase();
     const conflict = await db('users')
-      .where({ email: data.email })
+      .whereRaw('LOWER(email) = ?', [normalizedEmail])
       .modify((qb) => {
-        if (data.cpf) qb.orWhere({ cpf: data.cpf });
+        if (normalizedCpf) {
+          qb.orWhereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [normalizedCpf]);
+        }
         if (data.cnpj) qb.orWhere({ cnpj: data.cnpj });
       })
       .first();
@@ -108,9 +105,9 @@ export const userService = {
     const [user] = await db('users')
       .insert({
         name: data.name,
-        cpf: data.cpf ?? null,
+        cpf: normalizedCpf,
         cnpj: data.cnpj ?? null,
-        email: data.email,
+        email: normalizedEmail,
         address: data.address ?? null,
         password: hashedPassword,
         type: data.type ?? 'tutor',
@@ -154,10 +151,9 @@ export const userService = {
    * Usado pelo bot do WhatsApp para descobrir se a pessoa já é cadastrada.
    */
   async findByCpf(cpf: string) {
-    const masked = formatCpf(cpf);
     const digits = onlyDigits(cpf);
     return db('users')
-      .whereIn('cpf', [masked, digits, cpf])
+      .whereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [digits])
       .select(PUBLIC_COLUMNS)
       .first();
   },
@@ -176,7 +172,7 @@ export const userService = {
 
     return this.create({
       name: data.name,
-      cpf: formatCpf(data.cpf),
+      cpf: digits,
       email,
       phone: data.phone,
       password,

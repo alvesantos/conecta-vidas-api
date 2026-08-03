@@ -5,6 +5,30 @@ import { petService } from '../services/pet.service';
 import { refreshTokenService } from '../services/refreshToken.service';
 import logger from '../logger';
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function isValidPassword(value: string): boolean {
+  return value.length >= 8 && /[A-Za-zÀ-ÿ]/.test(value) && /\d/.test(value);
+}
+
+function isValidCpf(value: string): boolean {
+  const cpf = value.replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+  const digit = (factorStart: number, upTo: number) => {
+    let sum = 0;
+    for (let index = 0; index < upTo; index += 1) {
+      sum += Number(cpf[index]) * (factorStart - index);
+    }
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+
+  return digit(10, 9) === Number(cpf[9]) && digit(11, 10) === Number(cpf[10]);
+}
+
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev_secret';
 // Access token curto: o refresh token o renova de forma transparente.
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL ?? '15m';
@@ -181,6 +205,17 @@ export const authController = {
       const cepDigits = String(zip_code).replace(/\D/g, '');
       const allowedSexes = ['feminino', 'masculino', 'intersexo', 'nao_informado'];
       const parsedBirthDate = new Date(`${String(birth_date)}T12:00:00`);
+      if (!isValidEmail(String(email))) {
+        return res.status(400).json({ error: 'E-mail inválido.' });
+      }
+      if (!isValidPassword(String(password))) {
+        return res.status(400).json({
+          error: 'A senha deve ter ao menos 8 caracteres, incluindo letra e número.',
+        });
+      }
+      if (!isValidCpf(String(cpf))) {
+        return res.status(400).json({ error: 'CPF inválido.' });
+      }
       if (phoneDigits.length < 10 || phoneDigits.length > 11) {
         return res.status(400).json({ error: 'Telefone/WhatsApp inválido.' });
       }
