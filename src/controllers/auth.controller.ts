@@ -156,6 +156,10 @@ export const authController = {
         address,
         zip_code,
         house_number,
+        address_complement,
+        address_neighborhood,
+        address_city,
+        address_state,
         phone,
         birth_date,
         biological_sex,
@@ -163,8 +167,32 @@ export const authController = {
         pet,
       } = req.body as Record<string, unknown>;
 
-      if (!name || !cpf || !email || !password) {
-        return res.status(400).json({ error: 'Nome, CPF, e-mail e senha são obrigatórios.' });
+      if (
+        !name || !cpf || !email || !password || !phone || !birth_date ||
+        !biological_sex || !address || !zip_code || !house_number ||
+        !address_neighborhood || !address_city || !address_state
+      ) {
+        return res.status(400).json({
+          error: 'Preencha todos os dados pessoais e os campos obrigatórios do endereço.',
+        });
+      }
+
+      const phoneDigits = String(phone).replace(/\D/g, '');
+      const cepDigits = String(zip_code).replace(/\D/g, '');
+      const allowedSexes = ['feminino', 'masculino', 'intersexo', 'nao_informado'];
+      const parsedBirthDate = new Date(`${String(birth_date)}T12:00:00`);
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+        return res.status(400).json({ error: 'Telefone/WhatsApp inválido.' });
+      }
+      if (cepDigits.length !== 8 || String(address_state).trim().length !== 2) {
+        return res.status(400).json({ error: 'Endereço inválido.' });
+      }
+      if (
+        Number.isNaN(parsedBirthDate.getTime()) ||
+        parsedBirthDate > new Date() ||
+        !allowedSexes.includes(String(biological_sex))
+      ) {
+        return res.status(400).json({ error: 'Data de nascimento ou sexo biológico inválido.' });
       }
 
       const user = await userService.create({
@@ -174,6 +202,10 @@ export const authController = {
         address: (address as string | undefined) ?? null,
         zip_code: (zip_code as string | undefined) ?? null,
         house_number: (house_number as string | undefined) ?? null,
+        address_complement: (address_complement as string | undefined) ?? null,
+        address_neighborhood: address_neighborhood as string,
+        address_city: address_city as string,
+        address_state: String(address_state).toUpperCase(),
         phone: (phone as string | undefined) ?? null,
         birth_date: (birth_date as string | undefined) ?? null,
         biological_sex: (biological_sex as 'feminino' | 'masculino' | 'intersexo' | 'nao_informado' | undefined) ?? null,
