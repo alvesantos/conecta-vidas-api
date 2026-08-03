@@ -160,8 +160,8 @@ export const authController = {
         pet,
       } = req.body as Record<string, unknown>;
 
-      if (!name || !email || !password) {
-        return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
+      if (!name || !cpf || !email || !password) {
+        return res.status(400).json({ error: 'Nome, CPF, e-mail e senha são obrigatórios.' });
       }
 
       const user = await userService.create({
