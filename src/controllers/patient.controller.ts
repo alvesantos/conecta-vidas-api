@@ -5,6 +5,73 @@ import logger from '../logger';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const patientController = {
+  async profile(req: AuthRequest, res: Response) {
+    try {
+      const user = await db('users')
+        .where({ id: req.userId! })
+        .select(
+          'id', 'name', 'cpf', 'email', 'phone', 'birth_date', 'biological_sex',
+          'zip_code', 'address', 'house_number', 'address_complement',
+          'address_neighborhood', 'address_city', 'address_state',
+        )
+        .first();
+      const health = await db('clinical_records')
+        .where({ user_id: req.userId!, kind: 'humano' })
+        .whereNull('pet_id')
+        .select('blood_type', 'allergies', 'comorbidities', 'continuous_medications')
+        .first();
+      return res.json({ user, health });
+    } catch {
+      return res.status(500).json({ error: 'Erro ao buscar perfil.' });
+    }
+  },
+
+  async updateHealth(req: AuthRequest, res: Response) {
+    try {
+      const body = req.body as Record<string, unknown>;
+      const allowed = ['blood_type', 'allergies', 'comorbidities', 'continuous_medications'] as const;
+      const patch: Record<string, unknown> = {
+        updated_at: db.fn.now(),
+      };
+      for (const key of allowed) {
+        if (body[key] !== undefined) {
+          patch[key] = String(body[key]).trim() || null;
+        }
+      }
+      const [record] = await db('clinical_records')
+        .where({ user_id: req.userId!, kind: 'humano' })
+        .whereNull('pet_id')
+        .update(patch)
+        .returning('*');
+      if (!record) return res.status(404).json({ error: 'Prontuário humano não encontrado.' });
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: req.userId!, action: 'update',
+        resourceType: 'clinical_record', resourceId: record.id, context: 'humano',
+      });
+      return res.json(record);
+    } catch {
+      return res.status(500).json({ error: 'Erro ao atualizar ficha de saúde.' });
+    }
+  },
+
+  async consents(req: AuthRequest, res: Response) {
+    const rows = await db('user_consents')
+      .where({ user_id: req.userId! })
+      .select('id', 'consent_type', 'policy_version', 'granted_at', 'revoked_at', 'source')
+      .orderBy('granted_at', 'desc');
+    return res.json(rows);
+  },
+
+  async revokeConsent(req: AuthRequest, res: Response) {
+    const id = req.params['id'] as string;
+    const updated = await db('user_consents')
+      .where({ id, user_id: req.userId! })
+      .whereNull('revoked_at')
+      .update({ revoked_at: db.fn.now() });
+    if (!updated) return res.status(404).json({ error: 'Consentimento ativo não encontrado.' });
+    return res.status(204).send();
+  },
+
   async records(req: AuthRequest, res: Response) {
     try {
       const records = await db('clinical_records as cr')
