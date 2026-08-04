@@ -5,6 +5,93 @@ import logger from '../logger';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const patientController = {
+  async dependents(req: AuthRequest, res: Response) {
+    const rows = await db('human_dependents')
+      .where({ user_id: req.userId! })
+      .whereNull('deleted_at')
+      .select('*')
+      .orderBy('created_at');
+    return res.json(rows);
+  },
+
+  async createDependent(req: AuthRequest, res: Response) {
+    try {
+      const { name, cpf, birth_date, biological_sex, relationship, phone, legal_guardian_confirmed } =
+        req.body as Record<string, unknown>;
+      if (!name || !birth_date || !biological_sex || !relationship) {
+        return res.status(400).json({ error: 'Nome, nascimento, sexo biológico e vínculo são obrigatórios.' });
+      }
+      if (legal_guardian_confirmed !== true) {
+        return res.status(400).json({
+          error: 'Confirme a autorização ou responsabilidade legal sobre o dependente.',
+        });
+      }
+      const parsedBirth = new Date(`${String(birth_date)}T12:00:00`);
+      if (Number.isNaN(parsedBirth.getTime()) || parsedBirth > new Date()) {
+        return res.status(400).json({ error: 'Data de nascimento inválida.' });
+      }
+      const normalizedCpf = cpf ? String(cpf).replace(/\D/g, '') : null;
+      if (normalizedCpf && normalizedCpf.length !== 11) {
+        return res.status(400).json({ error: 'CPF inválido.' });
+      }
+      if (normalizedCpf) {
+        const [userCpf, dependentCpf] = await Promise.all([
+          db('users').whereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [normalizedCpf]).first(),
+          db('human_dependents').where({ cpf: normalizedCpf }).whereNull('deleted_at').first(),
+        ]);
+        if (userCpf || dependentCpf) return res.status(400).json({ error: 'CPF já cadastrado.' });
+      }
+      const dependent = await db.transaction(async trx => {
+        const [created] = await trx('human_dependents').insert({
+          user_id: req.userId!,
+          name: String(name).trim(),
+          cpf: normalizedCpf,
+          birth_date,
+          biological_sex,
+          relationship,
+          phone: phone ? String(phone).trim() : null,
+          legal_guardian_confirmed: legal_guardian_confirmed === true,
+        }).returning('*');
+        await trx('clinical_records').insert({
+          user_id: req.userId!,
+          dependent_id: created.id,
+          pet_id: null,
+          kind: 'humano',
+        });
+        return created;
+      });
+      return res.status(201).json(dependent);
+    } catch (err) {
+      return res.status(400).json({ error: err instanceof Error ? err.message : 'Erro ao cadastrar dependente.' });
+    }
+  },
+
+  async updateDependent(req: AuthRequest, res: Response) {
+    const id = req.params['id'] as string;
+    const current = await db('human_dependents')
+      .where({ id, user_id: req.userId! })
+      .whereNull('deleted_at')
+      .first();
+    if (!current) return res.status(404).json({ error: 'Dependente não encontrado.' });
+    const body = req.body as Record<string, unknown>;
+    const patch: Record<string, unknown> = { updated_at: db.fn.now() };
+    for (const key of ['name', 'birth_date', 'biological_sex', 'relationship', 'phone', 'legal_guardian_confirmed']) {
+      if (body[key] !== undefined) patch[key] = body[key];
+    }
+    const [updated] = await db('human_dependents').where({ id }).update(patch).returning('*');
+    return res.json(updated);
+  },
+
+  async deleteDependent(req: AuthRequest, res: Response) {
+    const id = req.params['id'] as string;
+    const updated = await db('human_dependents')
+      .where({ id, user_id: req.userId! })
+      .whereNull('deleted_at')
+      .update({ deleted_at: db.fn.now(), updated_at: db.fn.now() });
+    if (!updated) return res.status(404).json({ error: 'Dependente não encontrado.' });
+    return res.status(204).send();
+  },
+
   async profile(req: AuthRequest, res: Response) {
     try {
       const user = await db('users')
@@ -76,11 +163,12 @@ export const patientController = {
     try {
       const records = await db('clinical_records as cr')
         .leftJoin('pets as p', 'cr.pet_id', 'p.id')
+        .leftJoin('human_dependents as d', 'cr.dependent_id', 'd.id')
         .where('cr.user_id', req.userId!)
         .select(
-          'cr.id', 'cr.kind', 'cr.pet_id', 'cr.blood_type', 'cr.allergies',
+          'cr.id', 'cr.kind', 'cr.pet_id', 'cr.dependent_id', 'cr.blood_type', 'cr.allergies',
           'cr.comorbidities', 'cr.continuous_medications', 'cr.created_at',
-          'p.name as pet_name',
+          'p.name as pet_name', 'd.name as dependent_name',
         )
         .orderBy('cr.created_at', 'asc');
       await Promise.all(
@@ -106,10 +194,11 @@ export const patientController = {
       const prescriptions = await db('prescriptions as pr')
         .leftJoin('users as professional', 'pr.vet_id', 'professional.id')
         .leftJoin('pets as p', 'pr.pet_id', 'p.id')
+        .leftJoin('human_dependents as d', 'pr.dependent_id', 'd.id')
         .where('pr.user_id', req.userId!)
         .select(
-          'pr.id', 'pr.kind', 'pr.pet_id', 'pr.content', 'pr.date',
-          'professional.name as professional_name', 'p.name as pet_name',
+          'pr.id', 'pr.kind', 'pr.pet_id', 'pr.dependent_id', 'pr.content', 'pr.date',
+          'professional.name as professional_name', 'p.name as pet_name', 'd.name as dependent_name',
         )
         .orderBy('pr.date', 'desc');
       await Promise.all(

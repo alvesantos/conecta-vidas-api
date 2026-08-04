@@ -5,6 +5,10 @@ import { patientController } from '../controllers/patient.controller';
 const router = Router();
 
 router.use(requireAuth);
+router.get('/dependents', patientController.dependents);
+router.post('/dependents', patientController.createDependent);
+router.put('/dependents/:id', patientController.updateDependent);
+router.delete('/dependents/:id', patientController.deleteDependent);
 router.get('/profile', patientController.profile);
 router.put('/health', patientController.updateHealth);
 router.get('/consents', patientController.consents);

@@ -9,7 +9,7 @@ import { contextFromPetId } from '../utils/clinicalContext';
 export const consultationController = {
   async createConsultation(req: AuthRequest, res: Response) {
     try {
-      const { pet_id, kind, date, time, notes } = req.body as Record<string, string>;
+      const { pet_id, dependent_id, kind, date, time, notes } = req.body as Record<string, string>;
       if (!date || !time) {
         return res.status(400).json({ error: 'Data e horário são obrigatórios.' });
       }
@@ -32,11 +32,22 @@ export const consultationController = {
           .first();
         if (!ownedPet) return res.status(400).json({ error: 'Pet inválido para este usuário.' });
       }
+      if (dependent_id) {
+        if (resolvedKind !== 'humana') {
+          return res.status(400).json({ error: 'Dependente humano não pode ser vinculado à consulta veterinária.' });
+        }
+        const ownedDependent = await db('human_dependents')
+          .where({ id: dependent_id, user_id: req.userId! })
+          .whereNull('deleted_at')
+          .first();
+        if (!ownedDependent) return res.status(400).json({ error: 'Dependente inválido para este usuário.' });
+      }
 
       const consultation = await consultationService.create({
         tutor_id: req.userId!,
         vet_id: null,
         pet_id: pet_id || null,
+        dependent_id: dependent_id || null,
         date,
         time,
         notes,

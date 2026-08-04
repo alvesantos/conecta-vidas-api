@@ -68,11 +68,11 @@ export const medicoController = {
 
   async getRecord(req: AuthRequest, res: Response) {
     try {
-      const patientId = req.params['patientId'] as string;
-      const record = await medicoService.findHumanRecord(req.userId!, patientId);
+      const recordId = req.params['patientId'] as string;
+      const record = await medicoService.findHumanRecord(req.userId!, recordId);
       if (!record) return res.status(404).json({ error: 'Prontuário não encontrado.' });
       await logClinicalAccess({
-        actorUserId: req.userId!, patientUserId: patientId, action: 'read',
+        actorUserId: req.userId!, patientUserId: record.user_id, action: 'read',
         resourceType: 'clinical_record', resourceId: record.id, context: 'humano',
       });
       return res.json(record);
@@ -95,11 +95,11 @@ export const medicoController = {
 
   async createPrescription(req: AuthRequest, res: Response) {
     try {
-      const { patient_id, content, date } = req.body as Record<string, string>;
+      const { patient_id, dependent_id, content, date } = req.body as Record<string, string>;
       if (!patient_id || !content?.trim() || !date) {
         return res.status(400).json({ error: 'Paciente, conteúdo e data são obrigatórios.' });
       }
-      const prescription = await medicoService.createHumanPrescription(req.userId!, patient_id, content, date);
+      const prescription = await medicoService.createHumanPrescription(req.userId!, patient_id, dependent_id || null, content, date);
       await logClinicalAccess({
         actorUserId: req.userId!, patientUserId: patient_id, action: 'create',
         resourceType: 'prescription', resourceId: prescription.id, context: 'humano',
