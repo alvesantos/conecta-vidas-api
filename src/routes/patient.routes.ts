@@ -18,5 +18,6 @@ router.get('/consents', patientController.consents);
 router.post('/consents/:id/revoke', patientController.revokeConsent);
 router.get('/records', patientController.records);
 router.get('/prescriptions', patientController.prescriptions);
+router.get('/timeline', patientController.timeline);
 
 export default router;

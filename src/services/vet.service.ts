@@ -109,7 +109,7 @@ export const vetService = {
       .where('c.vet_id', vetId)
       .andWhere('c.kind', 'veterinaria')
       .select(
-        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.notes_visible_to_patient', 'c.meet_link',
         'tutor.name as tutor_name',
         'p.name as pet_name',
         'c.created_at',
@@ -128,7 +128,7 @@ export const vetService = {
   async saveConsultationSession(
     consultationId: string,
     vetId: string,
-    data: { meet_link?: string; notes?: string },
+    data: { meet_link?: string; notes?: string; notes_visible_to_patient?: boolean },
   ) {
     const consultation = await db('consultations')
       .where({ id: consultationId, vet_id: vetId, kind: 'veterinaria' })
@@ -139,13 +139,14 @@ export const vetService = {
     const update: Record<string, unknown> = { updated_at: db.fn.now() };
     if (data.meet_link !== undefined) update['meet_link'] = data.meet_link;
     if (data.notes !== undefined) update['notes'] = data.notes;
+    if (data.notes_visible_to_patient !== undefined) update['notes_visible_to_patient'] = data.notes_visible_to_patient;
 
     await db('consultations').where({ id: consultationId }).update(update);
 
     return db('consultations').where({ id: consultationId }).first();
   },
 
-  async updateConsultationStatus(consultationId: string, vetId: string, status: string, notes?: string) {
+  async updateConsultationStatus(consultationId: string, vetId: string, status: string, notes?: string, notesVisibleToPatient?: boolean) {
     const consultation = await db('consultations')
       .where({ id: consultationId, vet_id: vetId, kind: 'veterinaria' })
       .first();
@@ -155,6 +156,7 @@ export const vetService = {
     await db.transaction(async (trx) => {
       const consultationUpdate: Record<string, unknown> = { status, updated_at: db.fn.now() };
       if (notes !== undefined) consultationUpdate['notes'] = notes;
+      if (notesVisibleToPatient !== undefined) consultationUpdate['notes_visible_to_patient'] = notesVisibleToPatient;
 
       await trx('consultations')
         .where({ id: consultationId })

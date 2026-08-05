@@ -135,12 +135,12 @@ export const vetController = {
   async updateConsultationStatus(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
-      const { status, notes } = req.body as { status: string; notes?: string };
+      const { status, notes, notes_visible_to_patient } = req.body as { status: string; notes?: string; notes_visible_to_patient?: boolean };
       const valid = ['agendada', 'confirmada', 'realizada', 'cancelada'];
       if (!valid.includes(status)) {
         return res.status(400).json({ error: `Status inválido. Use: ${valid.join(', ')}` });
       }
-      const consultation = await vetService.updateConsultationStatus(id, req.userId!, status, notes);
+      const consultation = await vetService.updateConsultationStatus(id, req.userId!, status, notes, notes_visible_to_patient);
       res.json(consultation);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao atualizar consulta.';
@@ -152,8 +152,8 @@ export const vetController = {
   async saveConsultationSession(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
-      const { meet_link, notes } = req.body as { meet_link?: string; notes?: string };
-      const consultation = await vetService.saveConsultationSession(id, req.userId!, { meet_link, notes });
+      const { meet_link, notes, notes_visible_to_patient } = req.body as { meet_link?: string; notes?: string; notes_visible_to_patient?: boolean };
+      const consultation = await vetService.saveConsultationSession(id, req.userId!, { meet_link, notes, notes_visible_to_patient });
       res.json(consultation);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar sessão da consulta.';

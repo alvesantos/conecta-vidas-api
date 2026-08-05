@@ -277,4 +277,82 @@ export const patientController = {
       return res.status(500).json({ error: 'Erro ao listar receitas.' });
     }
   },
+
+  async timeline(req: AuthRequest, res: Response) {
+    try {
+      const kind = req.query['kind'] === 'veterinario' ? 'veterinario' : 'humano';
+      const petId = req.query['pet_id'] ? String(req.query['pet_id']) : null;
+      const dependentId = req.query['dependent_id'] ? String(req.query['dependent_id']) : null;
+      const type = req.query['type'] ? String(req.query['type']) : 'todos';
+      const from = req.query['from'] ? String(req.query['from']) : null;
+      const to = req.query['to'] ? String(req.query['to']) : null;
+      const page = Math.max(1, Number(req.query['page']) || 1);
+      const pageSize = Math.min(50, Math.max(5, Number(req.query['page_size']) || 10));
+
+      if (kind === 'veterinario') {
+        const pet = await db('pets').where({ id: petId, user_id: req.userId! }).whereNull('deleted_at').first();
+        if (!pet) return res.status(400).json({ error: 'Pet inválido.' });
+      } else if (dependentId) {
+        const dependent = await db('human_dependents').where({ id: dependentId, user_id: req.userId! }).whereNull('deleted_at').first();
+        if (!dependent) return res.status(400).json({ error: 'Dependente inválido.' });
+      }
+
+      const context = <T extends { where: Function; whereNull: Function }>(query: T, petColumn: string, dependentColumn: string) => {
+        if (kind === 'veterinario') return query.where(petColumn, petId);
+        query.whereNull(petColumn);
+        return dependentId ? query.where(dependentColumn, dependentId) : query.whereNull(dependentColumn);
+      };
+      const events: Array<Record<string, unknown> & { occurred_at: string | Date; type: string }> = [];
+
+      if (type === 'todos' || type === 'consulta') {
+        const query = db('consultations as c')
+          .leftJoin('users as professional', 'c.vet_id', 'professional.id')
+          .where('c.tutor_id', req.userId!)
+          .where('c.kind', kind === 'humano' ? 'humana' : 'veterinaria')
+          .select('c.id', 'c.date as occurred_at', 'c.time', 'c.status', 'c.notes', 'c.notes_visible_to_patient', 'professional.name as professional_name');
+        context(query, 'c.pet_id', 'c.dependent_id');
+        for (const row of await query) events.push({
+          ...row, type: 'consulta', title: kind === 'humano' ? 'Consulta médica' : 'Consulta veterinária',
+          notes: row.notes_visible_to_patient ? row.notes : null,
+        });
+      }
+      if (type === 'todos' || type === 'receita') {
+        const query = db('prescriptions as p')
+          .leftJoin('users as professional', 'p.vet_id', 'professional.id')
+          .where('p.user_id', req.userId!)
+          .where('p.kind', kind === 'humano' ? 'humana' : 'veterinaria')
+          .select('p.id', 'p.date as occurred_at', 'p.content', 'professional.name as professional_name');
+        context(query, 'p.pet_id', 'p.dependent_id');
+        for (const row of await query) events.push({ ...row, type: 'receita', title: 'Receita digital' });
+      }
+      if (type === 'todos' || type === 'exame') {
+        const query = db('clinical_exams as e')
+          .leftJoin('users as professional', 'e.professional_id', 'professional.id')
+          .where('e.user_id', req.userId!)
+          .where('e.kind', kind)
+          .select('e.id', 'e.requested_at as occurred_at', 'e.name', 'e.instructions', 'e.status', 'e.result_url', 'e.result_at', 'professional.name as professional_name');
+        context(query, 'e.pet_id', 'e.dependent_id');
+        for (const row of await query) events.push({ ...row, type: 'exame', title: row.name });
+      }
+
+      const eventDate = (value: string | Date) => {
+        if (value instanceof Date) return value.toISOString().slice(0, 10);
+        return String(value).slice(0, 10);
+      };
+      const filtered = events
+        .filter(event => !from || eventDate(event.occurred_at) >= from)
+        .filter(event => !to || eventDate(event.occurred_at) <= to)
+        .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+      const total = filtered.length;
+      const items = filtered.slice((page - 1) * pageSize, page * pageSize);
+      await logClinicalAccess({
+        actorUserId: req.userId!, patientUserId: req.userId!, action: 'read',
+        resourceType: 'clinical_timeline', context: kind,
+      });
+      return res.json({ items, page, page_size: pageSize, total, total_pages: Math.ceil(total / pageSize) });
+    } catch (err) {
+      logger.error('Erro ao carregar linha do tempo clínica', { message: err instanceof Error ? err.message : String(err), userId: req.userId });
+      return res.status(500).json({ error: 'Erro ao carregar histórico clínico.' });
+    }
+  },
 };
