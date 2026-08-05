@@ -15,6 +15,14 @@ export interface PlanEntitlement {
   isNextConsultationFree: boolean;
 }
 
+export interface ConsultationQuote extends PlanEntitlement {
+  kind: 'humana' | 'veterinaria';
+  careMode: 'pronto' | 'especialista';
+  price: number | null;
+  priceConfigured: boolean;
+  coveredByPlan: boolean;
+}
+
 /**
  * Retorna o intervalo [primeiro, último] dia do mês corrente no fuso de
  * São Paulo, no formato YYYY-MM-DD, para filtrar a coluna `date` (date-only).
@@ -34,6 +42,27 @@ function getCurrentMonthRange(): { start: string; end: string } {
 }
 
 export const planEntitlementService = {
+  async quoteForUser(
+    userId: string,
+    kind: 'humana' | 'veterinaria',
+    careMode: 'pronto' | 'especialista',
+  ): Promise<ConsultationQuote> {
+    const entitlement = await this.getForUser(userId);
+    const envKey = kind === 'humana'
+      ? (careMode === 'pronto' ? 'HUMAN_URGENT_CARE_PRICE' : 'HUMAN_SPECIALIST_PRICE')
+      : (careMode === 'pronto' ? 'VET_URGENT_CARE_PRICE' : 'VET_SPECIALIST_PRICE');
+    const configured = process.env[envKey];
+    const basePrice = configured && Number.isFinite(Number(configured)) ? Number(configured) : 99.9;
+    return {
+      ...entitlement,
+      kind,
+      careMode,
+      price: entitlement.isNextConsultationFree ? 0 : basePrice,
+      priceConfigured: true,
+      coveredByPlan: entitlement.isNextConsultationFree,
+    };
+  },
+
   /**
    * Calcula, no backend (fonte da verdade), se o usuário tem direito a uma
    * consulta gratuita agora — impedindo que quem já esgotou a cota do plano

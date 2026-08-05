@@ -9,11 +9,12 @@ import { contextFromPetId } from '../utils/clinicalContext';
 export const consultationController = {
   async createConsultation(req: AuthRequest, res: Response) {
     try {
-      const { pet_id, dependent_id, kind, date, time, notes } = req.body as Record<string, string>;
+      const { pet_id, dependent_id, kind, date, time, notes, care_mode } = req.body as Record<string, string>;
       if (!date || !time) {
         return res.status(400).json({ error: 'Data e horário são obrigatórios.' });
       }
       const resolvedKind = contextFromPetId(pet_id);
+      const careMode = care_mode === 'pronto' ? 'pronto' : 'especialista';
       if (kind && kind !== resolvedKind) {
         return res.status(400).json({
           error: kind === 'veterinaria'
@@ -24,7 +25,7 @@ export const consultationController = {
 
       // Regra de plano decidida no backend (fonte da verdade): se ainda há
       // cota gratuita no mês, esta consulta é registrada como gratuita.
-      const entitlement = await planEntitlementService.getForUser(req.userId!);
+      const quote = await planEntitlementService.quoteForUser(req.userId!, resolvedKind, careMode);
       if (pet_id) {
         const ownedPet = await db('pets')
           .where({ id: pet_id, user_id: req.userId! })
@@ -51,11 +52,13 @@ export const consultationController = {
         date,
         time,
         notes,
-        is_free: entitlement.isNextConsultationFree,
+        is_free: quote.coveredByPlan,
+        charged_value: quote.price,
+        care_mode: careMode,
         kind: resolvedKind,
       });
 
-      res.status(201).json({ ...consultation, entitlement });
+      res.status(201).json({ ...consultation, quote });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao agendar consulta.';
       logger.error('Erro ao agendar consulta', { message: msg, userId: req.userId });
@@ -73,6 +76,18 @@ export const consultationController = {
         userId: req.userId,
       });
       res.status(500).json({ error: 'Erro ao verificar plano.' });
+    }
+  },
+
+  async getQuote(req: AuthRequest, res: Response) {
+    try {
+      const kind = req.query['kind'] === 'veterinaria' ? 'veterinaria' : 'humana';
+      const careMode = req.query['care_mode'] === 'pronto' ? 'pronto' : 'especialista';
+      const quote = await planEntitlementService.quoteForUser(req.userId!, kind, careMode);
+      return res.json(quote);
+    } catch (err) {
+      logger.error('Erro ao calcular orçamento da consulta', { message: err instanceof Error ? err.message : String(err), userId: req.userId });
+      return res.status(500).json({ error: 'Erro ao verificar cobertura e preço.' });
     }
   },
 

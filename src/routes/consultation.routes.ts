@@ -7,6 +7,7 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/entitlement', consultationController.getEntitlement);
+router.get('/quote', consultationController.getQuote);
 router.post('/', consultationController.createConsultation);
 router.get('/', consultationController.listTutorConsultations);
 

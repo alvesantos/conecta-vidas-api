@@ -9,6 +9,8 @@ export interface CreateConsultationDTO {
   time: string;
   notes?: string;
   is_free?: boolean;
+  charged_value?: number | null;
+  care_mode?: 'pronto' | 'especialista';
   kind: 'humana' | 'veterinaria';
 }
 
@@ -25,7 +27,8 @@ export const consultationService = {
       notes: data.notes ?? '',
       status: 'agendada',
       is_free: isFree,
-      charged_value: isFree ? 0 : null,
+      charged_value: isFree ? 0 : data.charged_value ?? null,
+      care_mode: data.care_mode ?? 'especialista',
       kind: data.kind,
     }).returning('*');
 
@@ -40,7 +43,7 @@ export const consultationService = {
       .where('c.tutor_id', tutorId)
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
-        'c.is_free', 'c.charged_value', 'c.kind', 'c.pet_id', 'c.dependent_id',
+        'c.is_free', 'c.charged_value', 'c.care_mode', 'c.kind', 'c.pet_id', 'c.dependent_id',
         'vet.name as vet_name',
         'p.name as pet_name',
         'd.name as dependent_name',
