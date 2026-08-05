@@ -5,6 +5,64 @@ import logger from '../logger';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const patientController = {
+  async medicationReminders(req: AuthRequest, res: Response) {
+    const rows = await db('medication_reminders')
+      .where({ user_id: req.userId! })
+      .whereNull('deleted_at')
+      .select('*')
+      .orderBy('time');
+    return res.json(rows);
+  },
+
+  async createMedicationReminder(req: AuthRequest, res: Response) {
+    try {
+      const body = req.body as Record<string, unknown>;
+      const kind = body.kind === 'veterinario' ? 'veterinario' : 'humano';
+      const petId = kind === 'veterinario' ? String(body.pet_id || '') : null;
+      const dependentId = kind === 'humano' && body.dependent_id ? String(body.dependent_id) : null;
+      const name = String(body.name || '').trim();
+      const time = String(body.time || '');
+      if (!name || !/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
+        return res.status(400).json({ error: 'Medicamento e horário são obrigatórios.' });
+      }
+      if (kind === 'veterinario') {
+        const pet = await db('pets').where({ id: petId, user_id: req.userId! }).whereNull('deleted_at').first();
+        if (!pet) return res.status(400).json({ error: 'Pet inválido para este lembrete.' });
+      }
+      if (dependentId) {
+        const dependent = await db('human_dependents')
+          .where({ id: dependentId, user_id: req.userId! })
+          .whereNull('deleted_at')
+          .first();
+        if (!dependent) return res.status(400).json({ error: 'Dependente inválido para este lembrete.' });
+      }
+      const [created] = await db('medication_reminders').insert({
+        user_id: req.userId!,
+        kind,
+        pet_id: petId,
+        dependent_id: dependentId,
+        name,
+        dosage: body.dosage ? String(body.dosage).trim() : null,
+        instructions: body.instructions ? String(body.instructions).trim() : null,
+        time,
+      }).returning('*');
+      return res.status(201).json(created);
+    } catch (err) {
+      logger.error('Erro ao criar lembrete de medicamento', { message: err instanceof Error ? err.message : String(err) });
+      return res.status(500).json({ error: 'Erro ao criar lembrete.' });
+    }
+  },
+
+  async deleteMedicationReminder(req: AuthRequest, res: Response) {
+    const id = req.params['id'] as string;
+    const updated = await db('medication_reminders')
+      .where({ id, user_id: req.userId! })
+      .whereNull('deleted_at')
+      .update({ deleted_at: db.fn.now(), updated_at: db.fn.now() });
+    if (!updated) return res.status(404).json({ error: 'Lembrete não encontrado.' });
+    return res.status(204).send();
+  },
+
   async dependents(req: AuthRequest, res: Response) {
     const rows = await db('human_dependents')
       .where({ user_id: req.userId! })
