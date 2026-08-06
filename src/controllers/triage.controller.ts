@@ -98,6 +98,14 @@ export const triageController = {
             kind: triage.kind === 'humano' ? 'humana' : 'veterinaria',
             care_mode: 'pronto',
           }).returning('*');
+          await trx('care_queue').insert({
+            consultation_id: consultation.id,
+            user_id: req.userId!,
+            pet_id: triage.pet_id,
+            dependent_id: triage.dependent_id,
+            kind: triage.kind,
+            priority: warning ? 1 : 0,
+          });
         }
         const [completed] = await trx('quick_triages').where({ id }).update({
           status: 'concluida',
