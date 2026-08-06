@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/auth.middleware';
 import { patientController } from '../controllers/patient.controller';
+import { triageController } from '../controllers/triage.controller';
 
 const router = Router();
 
 router.use(requireAuth);
+router.get('/triage/symptoms', triageController.catalog);
+router.post('/triages', triageController.start);
+router.post('/triages/:id/complete', triageController.complete);
 router.get('/medication-reminders', patientController.medicationReminders);
 router.post('/medication-reminders', patientController.createMedicationReminder);
 router.delete('/medication-reminders/:id', patientController.deleteMedicationReminder);
