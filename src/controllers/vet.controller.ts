@@ -152,8 +152,8 @@ export const vetController = {
   async saveConsultationSession(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params as { id: string };
-      const { meet_link, notes, notes_visible_to_patient } = req.body as { meet_link?: string; notes?: string; notes_visible_to_patient?: boolean };
-      const consultation = await vetService.saveConsultationSession(id, req.userId!, { meet_link, notes, notes_visible_to_patient });
+      const { notes, notes_visible_to_patient } = req.body as { notes?: string; notes_visible_to_patient?: boolean };
+      const consultation = await vetService.saveConsultationSession(id, req.userId!, { notes, notes_visible_to_patient });
       res.json(consultation);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar sessão da consulta.';

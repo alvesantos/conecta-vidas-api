@@ -28,7 +28,7 @@ export const medicoService = {
       .join('users as patient', 'c.tutor_id', 'patient.id')
       .where({ 'c.vet_id': medicoId, 'c.kind': 'humana' })
       .select(
-        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.meet_link',
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes',
         'c.kind', 'patient.id as patient_id', 'patient.name as patient_name',
         'c.created_at',
       )

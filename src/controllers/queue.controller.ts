@@ -14,7 +14,7 @@ async function patientQueueState(userId: string, consultationId: string) {
     .where({ 'q.consultation_id': consultationId, 'q.user_id': userId })
     .select(
       'q.id', 'q.consultation_id', 'q.kind', 'q.status', 'q.priority', 'q.joined_at', 'q.called_at',
-      'q.pet_id', 'q.dependent_id', 'c.meet_link', 'professional.name as professional_name',
+      'q.pet_id', 'q.dependent_id', 'professional.name as professional_name',
       'pet.name as pet_name', 'dependent.name as dependent_name',
     )
     .first();

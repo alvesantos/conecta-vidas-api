@@ -7,6 +7,21 @@ import { db } from '../database/knex';
 import { contextFromPetId } from '../utils/clinicalContext';
 
 export const consultationController = {
+  async getVideoRoom(req: AuthRequest, res: Response) {
+    try {
+      const room = await consultationService.getOrCreateVideoRoom(
+        req.params['id'] as string,
+        req.userId!,
+        req.userType!,
+      );
+      return res.json(room);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao preparar sala.';
+      const denied = message.includes('acesso') || message.includes('disponível') || message.includes('Aguarde');
+      return res.status(denied ? 403 : 404).json({ error: message });
+    }
+  },
+
   async createConsultation(req: AuthRequest, res: Response) {
     try {
       const { pet_id, dependent_id, kind, date, time, notes, care_mode } = req.body as Record<string, string>;

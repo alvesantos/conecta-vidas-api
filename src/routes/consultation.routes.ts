@@ -8,6 +8,7 @@ router.use(requireAuth);
 
 router.get('/entitlement', consultationController.getEntitlement);
 router.get('/quote', consultationController.getQuote);
+router.get('/:id/room', consultationController.getVideoRoom);
 router.post('/', consultationController.createConsultation);
 router.get('/', consultationController.listTutorConsultations);
 

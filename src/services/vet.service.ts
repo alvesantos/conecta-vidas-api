@@ -109,7 +109,7 @@ export const vetService = {
       .where('c.vet_id', vetId)
       .andWhere('c.kind', 'veterinaria')
       .select(
-        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.notes_visible_to_patient', 'c.meet_link',
+        'c.id', 'c.date', 'c.time', 'c.status', 'c.notes', 'c.notes_visible_to_patient',
         'tutor.name as tutor_name',
         'p.name as pet_name',
         'c.created_at',
@@ -128,7 +128,7 @@ export const vetService = {
   async saveConsultationSession(
     consultationId: string,
     vetId: string,
-    data: { meet_link?: string; notes?: string; notes_visible_to_patient?: boolean },
+    data: { notes?: string; notes_visible_to_patient?: boolean },
   ) {
     const consultation = await db('consultations')
       .where({ id: consultationId, vet_id: vetId, kind: 'veterinaria' })
@@ -137,7 +137,6 @@ export const vetService = {
     if (!consultation) throw new Error('Consulta não encontrada.');
 
     const update: Record<string, unknown> = { updated_at: db.fn.now() };
-    if (data.meet_link !== undefined) update['meet_link'] = data.meet_link;
     if (data.notes !== undefined) update['notes'] = data.notes;
     if (data.notes_visible_to_patient !== undefined) update['notes_visible_to_patient'] = data.notes_visible_to_patient;
 
