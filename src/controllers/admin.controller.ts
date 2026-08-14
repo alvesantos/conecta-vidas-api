@@ -145,6 +145,14 @@ export const adminController = {
     }
   },
 
+  async cancelConsultation(req: Request, res: Response) {
+    const id = req.params['id'] as string;
+    const updated = await db('consultations').where({ id }).whereNot('status', 'realizada')
+      .update({ status: 'cancelada', updated_at: db.fn.now() });
+    if (!updated) return res.status(404).json({ error: 'Consulta não encontrada ou já realizada.' });
+    return res.json({ success: true });
+  },
+
   async getDashboardStats(_req: Request, res: Response) {
     try {
       res.json({ users: 0, subscriptions: 0 });

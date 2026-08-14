@@ -5,6 +5,8 @@ import { planEntitlementService } from '../services/planEntitlement.service';
 import logger from '../logger';
 import { db } from '../database/knex';
 import { contextFromPetId } from '../utils/clinicalContext';
+import { schedulingService } from '../services/scheduling.service';
+import { consultationEmailService } from '../services/consultationEmail.service';
 
 export const consultationController = {
   async getVideoRoom(req: AuthRequest, res: Response) {
@@ -24,7 +26,7 @@ export const consultationController = {
 
   async createConsultation(req: AuthRequest, res: Response) {
     try {
-      const { pet_id, dependent_id, kind, date, time, notes, care_mode } = req.body as Record<string, string>;
+      const { pet_id, dependent_id, kind, date, time, notes, care_mode, specialty_id, professional_id } = req.body as Record<string, string>;
       if (!date || !time) {
         return res.status(400).json({ error: 'Data e horário são obrigatórios.' });
       }
@@ -58,12 +60,19 @@ export const consultationController = {
           .first();
         if (!ownedDependent) return res.status(400).json({ error: 'Dependente inválido para este usuário.' });
       }
+      if (careMode === 'especialista') {
+        if (!specialty_id || !professional_id) return res.status(400).json({ error: 'Selecione especialidade e horário disponível.' });
+        const specialty = await db('specialties').where({ id: specialty_id, kind: resolvedKind, active: true }).first();
+        if (!specialty) return res.status(400).json({ error: 'Especialidade inválida para o atendimento.' });
+        await schedulingService.assertSlot(professional_id, specialty_id, date, time);
+      }
 
       const consultation = await consultationService.create({
         tutor_id: req.userId!,
-        vet_id: null,
+        vet_id: careMode === 'especialista' ? professional_id : null,
         pet_id: pet_id || null,
         dependent_id: dependent_id || null,
+        specialty_id: careMode === 'especialista' ? specialty_id : null,
         date,
         time,
         notes,
@@ -72,6 +81,8 @@ export const consultationController = {
         care_mode: careMode,
         kind: resolvedKind,
       });
+
+      void consultationEmailService.confirmation(consultation.id);
 
       res.status(201).json({ ...consultation, quote });
     } catch (err) {
@@ -114,5 +125,19 @@ export const consultationController = {
       logger.error('Erro ao listar consultas do tutor', { message: err instanceof Error ? err.message : String(err), userId: req.userId });
       res.status(500).json({ error: 'Erro ao listar consultas.' });
     }
-  }
+  },
+
+  async reschedule(req: AuthRequest, res: Response) {
+    try {
+      const id = req.params['id'] as string;
+      const { date, time, professional_id } = req.body as Record<string, string>;
+      const consultation = await db('consultations').where({ id, tutor_id: req.userId!, care_mode: 'especialista' }).first();
+      if (!consultation || ['cancelada', 'realizada'].includes(consultation.status)) return res.status(404).json({ error: 'Consulta não disponível para reagendamento.' });
+      if (!date || !time || !professional_id || !consultation.specialty_id) return res.status(400).json({ error: 'Data e horário disponíveis são obrigatórios.' });
+      await schedulingService.assertSlot(professional_id, consultation.specialty_id, date, time, id);
+      const [updated] = await db('consultations').where({ id }).update({ vet_id: professional_id, date, time, status: 'agendada', updated_at: db.fn.now() }).returning('*');
+      void consultationEmailService.confirmation(id);
+      return res.json(updated);
+    } catch (err) { return res.status(400).json({ error: err instanceof Error ? err.message : 'Erro ao reagendar consulta.' }); }
+  },
 };

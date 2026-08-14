@@ -11,6 +11,7 @@ import vetRoutes from "./vet.routes";
 import consultationRoutes from "./consultation.routes";
 import medicoRoutes from "./medico.routes";
 import patientRoutes from "./patient.routes";
+import schedulingRoutes from "./scheduling.routes";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use("/vet", vetRoutes);
 router.use("/medico", medicoRoutes);
 router.use("/consultations", consultationRoutes);
 router.use("/patient", patientRoutes);
+router.use("/scheduling", schedulingRoutes);
 
 export default router;

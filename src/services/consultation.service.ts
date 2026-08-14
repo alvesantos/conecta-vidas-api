@@ -6,6 +6,7 @@ export interface CreateConsultationDTO {
   tutor_id: string;
   pet_id?: string | null;
   dependent_id?: string | null;
+  specialty_id?: string | null;
   date: string;
   time: string;
   notes?: string;
@@ -93,6 +94,7 @@ export const consultationService = {
       tutor_id: data.tutor_id,
       pet_id: data.pet_id ?? null,
       dependent_id: data.dependent_id ?? null,
+      specialty_id: data.specialty_id ?? null,
       date: data.date,
       time: data.time,
       notes: data.notes ?? '',
@@ -114,12 +116,14 @@ export const consultationService = {
       .where('c.tutor_id', tutorId)
       .select(
         'c.id', 'c.date', 'c.time', 'c.status', 'c.notes',
-        'c.is_free', 'c.charged_value', 'c.care_mode', 'c.kind', 'c.pet_id', 'c.dependent_id',
+        'c.is_free', 'c.charged_value', 'c.care_mode', 'c.kind', 'c.pet_id', 'c.dependent_id', 'c.specialty_id',
         'vet.name as vet_name',
+        's.name as specialty_name',
         'p.name as pet_name',
         'd.name as dependent_name',
         'c.created_at'
       )
+      .leftJoin('specialties as s', 'c.specialty_id', 's.id')
       .orderBy('c.date', 'desc')
       .orderBy('c.time', 'desc');
   },

@@ -13,6 +13,7 @@
     "seed:make": "knex --knexfile knexfile.ts seed:make",
     "db:fresh": "ts-node scripts/db-fresh.ts && knex migrate:latest && knex seed:run",
     "test": "node --require ts-node/register --test src/**/*.test.ts"
+    ,"reminders": "ts-node scripts/send-consultation-reminders.ts"
   },
   "repository": {
     "type": "git",

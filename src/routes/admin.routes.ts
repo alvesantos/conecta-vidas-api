@@ -19,6 +19,7 @@ router.get('/subscriptions', adminController.listSubscriptions);
 
 router.get('/consultations', adminController.listConsultations);
 router.patch('/consultations/:id/assign', adminController.assignVet);
+router.patch('/consultations/:id/cancel', adminController.cancelConsultation);
 
 router.get('/pets', adminController.listPets);
 router.get('/pets/birthdays', adminController.listBirthdayPets);
