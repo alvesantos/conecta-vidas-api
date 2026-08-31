@@ -56,7 +56,7 @@ export const webhookController = {
         const sendUrl = `${evolutionApiUrl}/message/sendText/${encodeURIComponent(instanceName)}`;
         
         // Asynchronously send the reply back
-        await fetch(sendUrl, {
+        const response = await fetch(sendUrl, {
            method: 'POST',
            headers: {
                'Content-Type': 'application/json',
@@ -67,6 +67,9 @@ export const webhookController = {
                text: replyText
            })
         });
+
+        const respText = await response.text();
+        console.log(`Evolution API Send Status: ${response.status} - ${respText}`);
       }
     } catch (err) {
       console.error("Erro ao processar webhook evolution:", err);
