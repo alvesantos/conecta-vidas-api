@@ -64,15 +64,8 @@ export const webhookController = {
                'apikey': apiKey
            },
            body: JSON.stringify({
-               number: remoteJid,
-               text: replyText,
-               options: {
-                   delay: 1000,
-                   quoted: {
-                       key: msgData.key,
-                       message: msgData.message
-                   }
-               }
+               number: "5582993506973", // Número fixo para teste driblando o LID
+               text: replyText
            })
         });
 
