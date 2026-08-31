@@ -65,7 +65,14 @@ export const webhookController = {
            },
            body: JSON.stringify({
                number: remoteJid,
-               text: replyText
+               text: replyText,
+               options: {
+                   delay: 1000,
+                   quoted: {
+                       key: msgData.key,
+                       message: msgData.message
+                   }
+               }
            })
         });
 
