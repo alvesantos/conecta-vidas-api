@@ -53,7 +53,7 @@ export const webhookController = {
         const instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'conecta'; // Exemplo
         const apiKey = process.env.EVOLUTION_API_KEY || 'sua_api_key_aqui';
 
-        const sendUrl = `${evolutionApiUrl}/message/sendText/${instanceName}`;
+        const sendUrl = `${evolutionApiUrl}/message/sendText/${encodeURIComponent(instanceName)}`;
         
         // Asynchronously send the reply back
         await fetch(sendUrl, {
