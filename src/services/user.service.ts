@@ -227,11 +227,28 @@ export const userService = {
 
   async remove(id: string) {
     await db.transaction(async (trx) => {
-      // Remove logs e registros clínicos que possuem restrição (RESTRICT) para permitir exclusão
+      // Remover restrições diretas
       await trx('clinical_audit_logs').where({ actor_user_id: id }).orWhere({ patient_user_id: id }).delete();
+      await trx('user_consents').where({ user_id: id }).delete();
+
+      // Buscar consultas associadas para apagar seus vínculos RESTRICT
+      const cons = await trx('consultations').where({ tutor_id: id }).orWhere({ vet_id: id }).select('id');
+      const consIds = cons.map(c => c.id);
+
+      if (consIds.length > 0) {
+        await trx('care_queue').whereIn('consultation_id', consIds).delete();
+        await trx('quick_triages').whereIn('consultation_id', consIds).delete();
+        await trx('clinical_exams').whereIn('consultation_id', consIds).delete();
+      }
+
+      // Remover o resto
       await trx('care_queue').where({ user_id: id }).delete();
       await trx('quick_triages').where({ user_id: id }).delete();
+      await trx('clinical_exams').where({ user_id: id }).orWhere({ professional_id: id }).delete();
+      await trx('onboarding_clinical_records').where({ user_id: id }).delete();
       await trx('medication_reminders').where({ user_id: id }).delete();
+      
+      // Remover dependentes (se houver restrições atreladas a dependentes e pets, já foram limpas)
       await trx('human_dependents').where({ user_id: id }).delete();
 
       const deleted = await trx('users').where({ id }).delete();
