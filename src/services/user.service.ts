@@ -245,7 +245,7 @@ export const userService = {
       await trx('care_queue').where({ user_id: id }).delete();
       await trx('quick_triages').where({ user_id: id }).delete();
       await trx('clinical_exams').where({ user_id: id }).orWhere({ professional_id: id }).delete();
-      await trx('onboarding_clinical_records').where({ user_id: id }).delete();
+      await trx('clinical_records').where({ user_id: id }).delete();
       await trx('medication_reminders').where({ user_id: id }).delete();
       
       // Remover dependentes (se houver restrições atreladas a dependentes e pets, já foram limpas)
