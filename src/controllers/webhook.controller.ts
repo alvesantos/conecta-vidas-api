@@ -49,8 +49,9 @@ export const webhookController = {
             replyText = "Ola, somos do conectavidas. Você é cliente da nossa plataforma?\n\n1 - Sim\n2 - Não";
         }
 
-        const evolutionApiUrl = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-        const instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'conecta'; // Exemplo
+        const evolutionApiUrl = process.env.EVOLUTION_API_URL || body.server_url || 'http://localhost:8080';
+        // Pegamos o nome da instância diretamente do webhook (assim não erramos na digitação)
+        const instanceName = body.instance; 
         const apiKey = process.env.EVOLUTION_API_KEY || 'sua_api_key_aqui';
 
         const sendUrl = `${evolutionApiUrl}/message/sendText/${encodeURIComponent(instanceName)}`;
