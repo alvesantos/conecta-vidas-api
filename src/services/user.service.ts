@@ -226,8 +226,17 @@ export const userService = {
   },
 
   async remove(id: string) {
-    const deleted = await db('users').where({ id }).delete();
-    if (deleted === 0) throw new Error('Usuário não encontrado.');
+    await db.transaction(async (trx) => {
+      // Remove logs e registros clínicos que possuem restrição (RESTRICT) para permitir exclusão
+      await trx('clinical_audit_logs').where({ actor_user_id: id }).orWhere({ patient_user_id: id }).delete();
+      await trx('care_queue').where({ user_id: id }).delete();
+      await trx('quick_triages').where({ user_id: id }).delete();
+      await trx('medication_reminders').where({ user_id: id }).delete();
+      await trx('human_dependents').where({ user_id: id }).delete();
+
+      const deleted = await trx('users').where({ id }).delete();
+      if (deleted === 0) throw new Error('Usuário não encontrado.');
+    });
   },
 
   async login(data: LoginDTO) {
