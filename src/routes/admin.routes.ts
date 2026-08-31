@@ -10,6 +10,7 @@ router.use(requireAdmin);
 
 router.get('/users', adminController.listUsers);
 router.put('/users/:id', adminController.updateUser);
+router.patch('/users/:id/status', adminController.updateUserStatus);
 router.delete('/users/:id', adminController.deleteUser);
 router.post('/users/:id/subscription', adminController.assignUserPlan);
 router.delete('/users/:id/subscription', adminController.cancelUserPlan);

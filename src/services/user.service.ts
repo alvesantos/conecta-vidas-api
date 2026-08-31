@@ -53,6 +53,7 @@ export interface UpdateUserDTO {
   email?: string;
   address?: string | null;
   type?: UserType;
+  status?: string;
   crmv?: string | null;
   crm?: string | null;
   zip_code?: string | null;
@@ -214,6 +215,7 @@ export const userService = {
     if (data.phone !== undefined) patch.phone = data.phone;
     if (data.birth_date !== undefined) patch.birth_date = data.birth_date;
     if (data.biological_sex !== undefined) patch.biological_sex = data.biological_sex;
+    if (data.status !== undefined) patch.status = data.status;
 
     if (Object.keys(patch).length > 0) {
       patch.updated_at = db.fn.now();

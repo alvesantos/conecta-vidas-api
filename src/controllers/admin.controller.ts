@@ -21,6 +21,7 @@ export const adminController = {
           'u.cpf',
           'u.address',
           'u.type',
+          'u.status',
           'u.created_at',
           's.id as subscription_id',
           's.plan_id',
@@ -34,6 +35,27 @@ export const adminController = {
     } catch (err) {
       logger.error('Erro ao listar usuários', { message: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined });
       res.status(500).json({ error: 'Erro ao listar usuários.' });
+    }
+  },
+
+  async updateUserStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['active', 'suspended', 'rejected', 'pending'].includes(status)) {
+        return res.status(400).json({ error: 'Status inválido.' });
+      }
+
+      const updated = await db('users').where({ id }).update({ status });
+      if (!updated) {
+        return res.status(404).json({ error: 'Usuário não encontrado.' });
+      }
+
+      res.status(200).json({ message: 'Status atualizado com sucesso.' });
+    } catch (err: any) {
+      logger.error('Erro ao atualizar status', { message: err.message, stack: err.stack });
+      res.status(500).json({ error: 'Erro interno ao atualizar status.' });
     }
   },
 
