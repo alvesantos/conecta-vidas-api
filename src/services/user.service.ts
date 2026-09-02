@@ -225,6 +225,42 @@ export const userService = {
     return this.findById(id);
   },
 
+  async findBirthdayHumansThisMonth() {
+    const users = await db('users')
+      .select(
+        'id',
+        'name',
+        'email as contact',
+        db.raw("'Titular' as relationship"),
+        'birth_date',
+        'type'
+      )
+      .whereNotNull('birth_date')
+      .whereRaw('EXTRACT(MONTH FROM birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)');
+
+    const dependents = await db('human_dependents')
+      .select(
+        'id',
+        'name',
+        'phone as contact',
+        'relationship',
+        'birth_date',
+        db.raw("'dependent' as type")
+      )
+      .whereNull('deleted_at')
+      .whereRaw('EXTRACT(MONTH FROM birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)');
+
+    const all = [...users, ...dependents];
+    // Ordenar pelo dia do aniversário
+    all.sort((a, b) => {
+      const dayA = new Date(a.birth_date).getUTCDate();
+      const dayB = new Date(b.birth_date).getUTCDate();
+      return dayA - dayB;
+    });
+
+    return all;
+  },
+
   async remove(id: string) {
     await db.transaction(async (trx) => {
       // Remover restrições diretas

@@ -123,6 +123,16 @@ export const adminController = {
     }
   },
 
+  async listBirthdayHumans(_req: Request, res: Response) {
+    try {
+      const humans = await userService.findBirthdayHumansThisMonth();
+      return res.json(humans);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Erro ao buscar aniversariantes humanos.' });
+    }
+  },
+
   async listBirthdayPets(_req: Request, res: Response) {
     try {
       const pets = await petService.findBirthdayPetsThisMonth();

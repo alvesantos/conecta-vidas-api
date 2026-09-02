@@ -23,6 +23,7 @@ router.patch('/consultations/:id/assign', adminController.assignVet);
 router.patch('/consultations/:id/cancel', adminController.cancelConsultation);
 
 router.get('/pets', adminController.listPets);
+router.get('/users/birthdays', adminController.listBirthdayHumans);
 router.get('/pets/birthdays', adminController.listBirthdayPets);
 router.get('/pets/:id', adminController.getPet);
 
