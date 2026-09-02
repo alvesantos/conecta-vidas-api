@@ -34,6 +34,52 @@ export interface CreateRecipientDTO {
 }
 
 export const vetService = {
+  async getDashboardStats(vetId: string) {
+    const today = await db('consultations')
+      .where({ vet_id: vetId, kind: 'veterinaria', date: db.raw('CURRENT_DATE') })
+      .count('* as count').first();
+    
+    const week = await db('consultations')
+      .where({ vet_id: vetId, kind: 'veterinaria' })
+      .andWhereRaw("date >= CURRENT_DATE - INTERVAL '7 days'")
+      .count('* as count').first();
+
+    const totalClients = await db('consultations')
+      .where({ vet_id: vetId, kind: 'veterinaria' })
+      .countDistinct('tutor_id as count').first();
+
+    const pendingRecords = await db('consultations')
+      .where({ vet_id: vetId, kind: 'veterinaria', status: 'agendada' })
+      .andWhereRaw("date < CURRENT_DATE")
+      .count('* as count').first();
+
+    const recentConsultations = await db('consultations as c')
+      .join('pets', 'c.pet_id', 'pets.id')
+      .where({ 'c.vet_id': vetId, 'c.kind': 'veterinaria', 'c.date': db.raw('CURRENT_DATE') })
+      .select(
+        'c.id', 'c.time', 'c.status', 'c.care_mode as type',
+        'pets.name as patient_name'
+      )
+      .orderBy('c.time', 'asc')
+      .limit(5);
+
+    return {
+      stats: {
+        today: Number(today?.count || 0),
+        week: Number(week?.count || 0),
+        totalClients: Number(totalClients?.count || 0),
+        pendingRecords: Number(pendingRecords?.count || 0),
+      },
+      recentConsultations: recentConsultations.map(c => ({
+        id: c.id,
+        patient: c.patient_name,
+        time: String(c.time).substring(0, 5),
+        type: c.type === 'pronto' ? 'Pronto Atendimento' : 'Especialista',
+        status: String(c.status).charAt(0).toUpperCase() + String(c.status).slice(1)
+      }))
+    };
+  },
+
   async createRecipient(data: CreateRecipientDTO): Promise<string> {
     const cnpjClean = data.cnpj.replace(/\D/g, '');
 

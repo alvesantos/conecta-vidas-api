@@ -6,6 +6,7 @@ import { queueController } from '../controllers/queue.controller';
 const router = Router();
 
 router.use(requireMedico);
+router.get('/dashboard', medicoController.getDashboardStats);
 router.get('/profile', medicoController.getProfile);
 router.put('/password', medicoController.changePassword);
 router.get('/consultations', medicoController.listConsultations);

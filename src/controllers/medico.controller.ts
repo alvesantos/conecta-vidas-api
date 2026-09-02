@@ -5,6 +5,15 @@ import logger from '../logger';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
 
 export const medicoController = {
+  async getDashboardStats(req: AuthRequest, res: Response) {
+    try {
+      const data = await medicoService.getDashboardStats(req.userId!);
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao buscar dashboard.' });
+    }
+  },
+
   async getProfile(req: AuthRequest, res: Response) {
     try {
       const profile = await medicoService.getProfile(req.userId!);

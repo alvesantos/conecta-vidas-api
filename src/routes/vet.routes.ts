@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(requireVet);
 
+router.get('/dashboard', vetController.getDashboardStats);
 router.get('/profile', vetController.getProfile);
 router.put('/password', vetController.changePassword);
 router.get('/consultations', vetController.listConsultations);

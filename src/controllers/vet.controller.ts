@@ -8,6 +8,15 @@ import { logClinicalAccess } from '../services/clinicalAudit.service';
 import logger from '../logger';
 
 export const vetController = {
+  async getDashboardStats(req: AuthRequest, res: Response) {
+    try {
+      const data = await vetService.getDashboardStats(req.userId!);
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao buscar dashboard.' });
+    }
+  },
+
   async createVet(req: AuthRequest, res: Response) {
     try {
       const {
