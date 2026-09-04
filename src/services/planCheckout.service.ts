@@ -77,11 +77,18 @@ export const planCheckoutService = {
    * Ativa a assinatura correspondente (se ainda não ativa) e cancela as demais
    * ativas do usuário. `asaasPaymentId` é opcional — nem todo evento de
    * confirmação carrega o id do pagamento (ver nota em `activateByCheckoutId`).
+   *
+   * O valor pago NÃO vem do payload do webhook — o formato varia entre
+   * eventos (`CHECKOUT_PAID` não manda `value` de volta, na prática) — em vez
+   * disso recalculamos a partir do próprio plano, que já conhecemos.
    */
-  async _activate(subscription: { id: string; user_id: string }, asaasPaymentId: string | null, paidValue: number) {
+  async _activate(subscription: { id: string; user_id: string; plan_id: string }, asaasPaymentId: string | null) {
     await db.transaction(async (trx) => {
       const current = await trx('subscriptions').where({ id: subscription.id }).first();
       if (!current || current.status === 'active') return;
+
+      const plan = await trx('plans').where({ id: subscription.plan_id }).first();
+      const paidValue = Math.round(Number(plan?.price ?? 0) * 12 * 100) / 100;
 
       await trx('subscriptions')
         .where({ user_id: subscription.user_id, status: 'active' })
@@ -108,10 +115,10 @@ export const planCheckoutService = {
    * prática NÃO propagar em todo pagamento gerado a partir de um checkout,
    * mesmo a documentação da Asaas sugerindo que sim).
    */
-  async activateByCheckoutId(checkoutId: string, paidValue: number) {
+  async activateByCheckoutId(checkoutId: string) {
     const subscription = await db('subscriptions').where({ asaas_checkout_id: checkoutId }).first();
     if (!subscription) return;
-    await this._activate(subscription, null, paidValue);
+    await this._activate(subscription, null);
   },
 
   async cancelByCheckoutId(checkoutId: string) {
@@ -122,10 +129,10 @@ export const planCheckoutService = {
   },
 
   /** Caminho de reforço: usado quando o evento é de PAYMENT_* e o externalReference veio preenchido. */
-  async activateByExternalReference(externalReference: string, asaasPaymentId: string, paidValue: number) {
+  async activateByExternalReference(externalReference: string, asaasPaymentId: string) {
     const subscription = await db('subscriptions').where({ id: externalReference }).first();
     if (!subscription) return;
-    await this._activate(subscription, asaasPaymentId, paidValue);
+    await this._activate(subscription, asaasPaymentId);
   },
 
   async cancelByExternalReference(externalReference: string) {

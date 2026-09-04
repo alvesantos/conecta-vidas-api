@@ -22,9 +22,9 @@ export const asaasWebhookController = {
       // Caminho principal: eventos de Checkout, casados por checkout.id
       // (asaas_checkout_id) — ver nota em planCheckout.service.ts sobre por
       // que isso é mais confiável que payment.externalReference.
-      const checkout = req.body?.checkout as { id?: string; value?: number } | undefined;
+      const checkout = req.body?.checkout as { id?: string } | undefined;
       if (checkout?.id && event === 'CHECKOUT_PAID') {
-        await planCheckoutService.activateByCheckoutId(checkout.id, checkout.value ?? 0);
+        await planCheckoutService.activateByCheckoutId(checkout.id);
       } else if (checkout?.id && (event === 'CHECKOUT_CANCELED' || event === 'CHECKOUT_EXPIRED')) {
         await planCheckoutService.cancelByCheckoutId(checkout.id);
       }
@@ -32,9 +32,9 @@ export const asaasWebhookController = {
       // Caminho de reforço: eventos de pagamento, quando o externalReference
       // veio preenchido (nem sempre acontece com pagamentos gerados a partir
       // de um checkout).
-      const payment = req.body?.payment as { id?: string; value?: number; externalReference?: string } | undefined;
+      const payment = req.body?.payment as { id?: string; externalReference?: string } | undefined;
       if (payment?.externalReference && payment?.id && event && CONFIRMED_PAYMENT_EVENTS.has(event)) {
-        await planCheckoutService.activateByExternalReference(payment.externalReference, payment.id, payment.value ?? 0);
+        await planCheckoutService.activateByExternalReference(payment.externalReference, payment.id);
       } else if (payment?.externalReference && event && CANCELED_PAYMENT_EVENTS.has(event)) {
         await planCheckoutService.cancelByExternalReference(payment.externalReference);
       }
