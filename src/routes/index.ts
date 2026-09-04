@@ -12,6 +12,7 @@ import consultationRoutes from "./consultation.routes";
 import medicoRoutes from "./medico.routes";
 import patientRoutes from "./patient.routes";
 import schedulingRoutes from "./scheduling.routes";
+import marketingRoutes from "./marketing.routes";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/medico", medicoRoutes);
 router.use("/consultations", consultationRoutes);
 router.use("/patient", patientRoutes);
 router.use("/scheduling", schedulingRoutes);
+router.use("/marketing", marketingRoutes);
 
 export default router;

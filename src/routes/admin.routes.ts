@@ -3,6 +3,7 @@ import { adminController } from '../controllers/admin.controller';
 import { planController } from '../controllers/plan.controller';
 import { vetController } from '../controllers/vet.controller';
 import { requireAdmin } from '../middlewares/auth.middleware';
+import { marketingController } from '../controllers/marketing.controller';
 
 const router = Router();
 
@@ -24,6 +25,9 @@ router.patch('/consultations/:id/cancel', adminController.cancelConsultation);
 
 router.get('/queue', adminController.listQueue);
 router.patch('/queue/:id/assign', adminController.assignQueueItem);
+
+router.post('/marketing/campaigns', marketingController.sendCampaign);
+router.post('/marketing/test-send', marketingController.testSend);
 
 router.get('/pets', adminController.listPets);
 router.get('/users/birthdays', adminController.listBirthdayHumans);
