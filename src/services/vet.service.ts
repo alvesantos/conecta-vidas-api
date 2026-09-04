@@ -1,4 +1,5 @@
 import { db } from '../database/knex';
+import { careQueueService } from './careQueue.service';
 
 const PAGARME_API = 'https://api.pagar.me/core/v5';
 const PAGARME_SECRET = process.env.PAGARME_SECRET_KEY ?? '';
@@ -131,7 +132,7 @@ export const vetService = {
         'bank_account_digit', 'bank_account_type', 'bank_holder_type',
         'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
         'billing_neighborhood', 'billing_city', 'billing_state',
-        'crmv',
+        'crmv', 'available_now', 'available_since',
       )
       .orderBy('created_at', 'desc');
   },
@@ -207,6 +208,8 @@ export const vetService = {
         .where({ id: consultationId })
         .update(consultationUpdate);
 
+      await careQueueService.syncOnConsultationStatus(trx, consultationId, status);
+
       if (status === 'realizada') {
         const dateStr = consultation.date instanceof Date ? consultation.date.toISOString().slice(0, 10) : consultation.date;
         const sessionNotes = (notes ?? consultation.notes ?? '').trim();
@@ -247,6 +250,7 @@ export const vetService = {
         'billing_cep', 'billing_street', 'billing_number', 'billing_complement',
         'billing_neighborhood', 'billing_city', 'billing_state',
         'crmv',
+        'available_now', 'available_since',
         'created_at',
       )
       .first();

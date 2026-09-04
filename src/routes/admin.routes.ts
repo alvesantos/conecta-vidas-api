@@ -22,6 +22,9 @@ router.get('/consultations', adminController.listConsultations);
 router.patch('/consultations/:id/assign', adminController.assignVet);
 router.patch('/consultations/:id/cancel', adminController.cancelConsultation);
 
+router.get('/queue', adminController.listQueue);
+router.patch('/queue/:id/assign', adminController.assignQueueItem);
+
 router.get('/pets', adminController.listPets);
 router.get('/users/birthdays', adminController.listBirthdayHumans);
 router.get('/pets/birthdays', adminController.listBirthdayPets);

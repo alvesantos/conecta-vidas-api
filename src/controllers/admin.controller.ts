@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express';
+import type { AuthRequest } from '../middlewares/auth.middleware';
 import { db } from '../database/knex';
 import { userService } from '../services/user.service';
 import { petService } from '../services/pet.service';
 import { subscriptionService } from '../services/subscription.service';
 import { consultationService } from '../services/consultation.service';
+import { careQueueService, type QueueKind } from '../services/careQueue.service';
 import logger from '../logger';
 
 export const adminController = {
@@ -22,6 +24,8 @@ export const adminController = {
           'u.address',
           'u.type',
           'u.status',
+          'u.available_now',
+          'u.available_since',
           'u.created_at',
           's.id as subscription_id',
           's.plan_id',
@@ -47,7 +51,12 @@ export const adminController = {
         return res.status(400).json({ error: 'Status inválido.' });
       }
 
-      const updated = await db('users').where({ id }).update({ status });
+      const update: Record<string, unknown> = { status };
+      if (status !== 'active') {
+        update['available_now'] = false;
+        update['available_since'] = null;
+      }
+      const updated = await db('users').where({ id }).update(update);
       if (!updated) {
         return res.status(404).json({ error: 'Usuário não encontrado.' });
       }
@@ -169,6 +178,10 @@ export const adminController = {
       const { id } = req.params as { id: string };
       const { vet_id } = req.body as Record<string, string>;
       if (!vet_id) return res.status(400).json({ error: 'vet_id é obrigatório' });
+      const consultation = await db('consultations').where({ id }).select('care_mode').first();
+      if (consultation?.care_mode === 'pronto') {
+        return res.status(400).json({ error: 'Use PATCH /admin/queue/:id/assign para direcionar atendimentos de pronto atendimento.' });
+      }
       await consultationService.assignVet(id, vet_id);
       res.json({ success: true });
     } catch (err) {
@@ -179,10 +192,46 @@ export const adminController = {
 
   async cancelConsultation(req: Request, res: Response) {
     const id = req.params['id'] as string;
-    const updated = await db('consultations').where({ id }).whereNot('status', 'realizada')
-      .update({ status: 'cancelada', updated_at: db.fn.now() });
-    if (!updated) return res.status(404).json({ error: 'Consulta não encontrada ou já realizada.' });
+    const changed = await db.transaction(async trx => {
+      const updated = await trx('consultations').where({ id }).whereNot('status', 'realizada')
+        .update({ status: 'cancelada', updated_at: trx.fn.now() });
+      if (updated) await careQueueService.syncOnConsultationStatus(trx, id, 'cancelada');
+      return updated;
+    });
+    if (!changed) return res.status(404).json({ error: 'Consulta não encontrada ou já realizada.' });
     return res.json({ success: true });
+  },
+
+  async listQueue(req: Request, res: Response) {
+    try {
+      const kindParam = req.query['kind'];
+      const kind = kindParam === 'humano' || kindParam === 'veterinario' ? kindParam : undefined;
+      const [queue, humanProfessionals, vetProfessionals] = await Promise.all([
+        careQueueService.listForAdmin(kind as QueueKind | undefined),
+        careQueueService.listAvailableProfessionals('humano'),
+        careQueueService.listAvailableProfessionals('veterinario'),
+      ]);
+      res.json({ queue, professionals: { humano: humanProfessionals, veterinario: vetProfessionals } });
+    } catch (err) {
+      logger.error('Erro ao listar fila (admin)', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao listar fila.' });
+    }
+  },
+
+  async assignQueueItem(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { professional_id } = req.body as { professional_id?: string };
+      if (!professional_id) return res.status(400).json({ error: 'professional_id é obrigatório.' });
+      const result = await careQueueService.assignToProfessional(id, professional_id, (req as AuthRequest).userId!);
+      if ('conflict' in result) return res.status(409).json({ error: 'Este paciente não está mais aguardando na fila.' });
+      if ('invalid' in result) return res.status(400).json({ error: 'Profissional incompatível ou inativo para este tipo de atendimento.' });
+      if ('unavailable' in result) return res.status(409).json({ error: 'Este profissional não está marcado como disponível agora.' });
+      res.json(result);
+    } catch (err) {
+      logger.error('Erro ao direcionar paciente da fila', { message: err instanceof Error ? err.message : String(err) });
+      res.status(500).json({ error: 'Erro ao direcionar paciente.' });
+    }
   },
 
   async getDashboardStats(_req: Request, res: Response) {

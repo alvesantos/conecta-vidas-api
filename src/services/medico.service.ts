@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { db } from '../database/knex';
+import { careQueueService } from './careQueue.service';
 
 export const medicoService = {
   async getDashboardStats(medicoId: string) {
@@ -52,6 +53,7 @@ export const medicoService = {
         'pix_type', 'pix_key',
         'bank_code', 'bank_name', 'bank_agency', 'bank_account_number',
         'bank_account_digit', 'bank_account_type',
+        'available_now', 'available_since',
       )
       .first();
   },
@@ -105,6 +107,48 @@ export const medicoService = {
 
     if (date) query.where('c.date', date);
     return query;
+  },
+
+  async saveConsultationSession(
+    consultationId: string,
+    medicoId: string,
+    data: { notes?: string; notes_visible_to_patient?: boolean },
+  ) {
+    const consultation = await db('consultations')
+      .where({ id: consultationId, vet_id: medicoId, kind: 'humana' })
+      .first();
+
+    if (!consultation) throw new Error('Consulta não encontrada.');
+
+    const update: Record<string, unknown> = { updated_at: db.fn.now() };
+    if (data.notes !== undefined) update['notes'] = data.notes;
+    if (data.notes_visible_to_patient !== undefined) update['notes_visible_to_patient'] = data.notes_visible_to_patient;
+
+    await db('consultations').where({ id: consultationId }).update(update);
+
+    return db('consultations').where({ id: consultationId }).first();
+  },
+
+  async updateConsultationStatus(consultationId: string, medicoId: string, status: string, notes?: string, notesVisibleToPatient?: boolean) {
+    const consultation = await db('consultations')
+      .where({ id: consultationId, vet_id: medicoId, kind: 'humana' })
+      .first();
+
+    if (!consultation) throw new Error('Consulta não encontrada.');
+
+    await db.transaction(async (trx) => {
+      const consultationUpdate: Record<string, unknown> = { status, updated_at: db.fn.now() };
+      if (notes !== undefined) consultationUpdate['notes'] = notes;
+      if (notesVisibleToPatient !== undefined) consultationUpdate['notes_visible_to_patient'] = notesVisibleToPatient;
+
+      await trx('consultations')
+        .where({ id: consultationId })
+        .update(consultationUpdate);
+
+      await careQueueService.syncOnConsultationStatus(trx, consultationId, status);
+    });
+
+    return db('consultations').where({ id: consultationId }).first();
   },
 
   async findHumanRecords(medicoId: string) {

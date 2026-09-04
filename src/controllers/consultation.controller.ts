@@ -31,7 +31,13 @@ export const consultationController = {
         return res.status(400).json({ error: 'Data e horário são obrigatórios.' });
       }
       const resolvedKind = contextFromPetId(pet_id);
-      const careMode = care_mode === 'pronto' ? 'pronto' : 'especialista';
+      // Pronto atendimento só pode ser criado via triagem (POST /patient/triages/:id/complete),
+      // que insere consultation + care_queue numa transação. Esse endpoint genérico é exclusivo
+      // de agendamento com especialista — impede consultas 'pronto' órfãs, sem entrada na fila.
+      if (care_mode === 'pronto') {
+        return res.status(400).json({ error: 'Pronto atendimento deve ser solicitado via triagem.' });
+      }
+      const careMode = 'especialista';
       if (kind && kind !== resolvedKind) {
         return res.status(400).json({
           error: kind === 'veterinaria'

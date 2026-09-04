@@ -2,8 +2,7 @@ import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { db } from '../database/knex';
 import logger from '../logger';
-
-type QueueKind = 'humano' | 'veterinario';
+import { careQueueService, type QueueKind } from '../services/careQueue.service';
 
 async function patientQueueState(userId: string, consultationId: string) {
   const item = await db('care_queue as q')
@@ -39,22 +38,6 @@ async function patientQueueState(userId: string, consultationId: string) {
       ? 'Atendimento próximo'
       : `Estimativa aproximada: ${Math.max(5, (position - 1) * 8)}–${position * 12} min`;
   return { ...item, position, estimate };
-}
-
-async function listProfessional(kind: QueueKind) {
-  return db('care_queue as q')
-    .join('consultations as c', 'q.consultation_id', 'c.id')
-    .join('users as patient', 'q.user_id', 'patient.id')
-    .leftJoin('pets as pet', 'q.pet_id', 'pet.id')
-    .leftJoin('human_dependents as dependent', 'q.dependent_id', 'dependent.id')
-    .where({ 'q.kind': kind, 'q.status': 'aguardando' })
-    .select(
-      'q.id', 'q.consultation_id', 'q.joined_at', 'q.priority',
-      'patient.name as owner_name', 'pet.name as pet_name', 'dependent.name as dependent_name',
-      'c.notes',
-    )
-    .orderBy('q.priority', 'desc')
-    .orderBy('q.joined_at', 'asc');
 }
 
 async function callNext(req: AuthRequest, res: Response, kind: QueueKind) {
@@ -131,10 +114,10 @@ export const queueController = {
   },
 
   async humanList(_req: AuthRequest, res: Response) {
-    return res.json(await listProfessional('humano'));
+    return res.json(await careQueueService.listForProfessional('humano'));
   },
   async veterinaryList(_req: AuthRequest, res: Response) {
-    return res.json(await listProfessional('veterinario'));
+    return res.json(await careQueueService.listForProfessional('veterinario'));
   },
   async callHuman(req: AuthRequest, res: Response) {
     return callNext(req, res, 'humano');

@@ -11,6 +11,7 @@ router.get('/dashboard', vetController.getDashboardStats);
 router.get('/profile', vetController.getProfile);
 router.put('/password', vetController.changePassword);
 router.put('/financeiro', vetController.updateFinanceiro);
+router.patch('/availability', vetController.setAvailability);
 router.get('/consultations', vetController.listConsultations);
 router.get('/queue', queueController.veterinaryList);
 router.post('/queue/:id/call', queueController.callVeterinary);

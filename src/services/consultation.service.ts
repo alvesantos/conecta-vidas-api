@@ -1,5 +1,6 @@
 import { db } from '../database/knex';
 import { randomBytes } from 'node:crypto';
+import { careQueueService } from './careQueue.service';
 
 export interface CreateConsultationDTO {
   vet_id?: string | null;
@@ -52,6 +53,10 @@ export const consultationService = {
     }
     if (isPatient && !consultation.vet_id) {
       throw new Error('Aguarde um profissional assumir o atendimento.');
+    }
+
+    if (isAssignedProfessional) {
+      await careQueueService.markInProgress(consultationId);
     }
 
     const legacyPredictableLink = `https://meet.jit.si/ConectaVet-${consultationId}`;

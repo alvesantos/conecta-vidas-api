@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { medicoService } from '../services/medico.service';
+import { careQueueService } from '../services/careQueue.service';
 import logger from '../logger';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
 
@@ -89,6 +90,48 @@ export const medicoController = {
         userId: req.userId,
       });
       return res.status(500).json({ error: 'Erro ao listar consultas.' });
+    }
+  },
+
+  async updateConsultationStatus(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { status, notes, notes_visible_to_patient } = req.body as { status: string; notes?: string; notes_visible_to_patient?: boolean };
+      const valid = ['agendada', 'confirmada', 'realizada', 'cancelada'];
+      if (!valid.includes(status)) {
+        return res.status(400).json({ error: `Status inválido. Use: ${valid.join(', ')}` });
+      }
+      const consultation = await medicoService.updateConsultationStatus(id, req.userId!, status, notes, notes_visible_to_patient);
+      return res.json(consultation);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar consulta.';
+      logger.error('Erro ao atualizar status da consulta médica', { message: msg, consultationId: req.params['id'], userId: req.userId });
+      return res.status(400).json({ error: msg });
+    }
+  },
+
+  async saveConsultationSession(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { notes, notes_visible_to_patient } = req.body as { notes?: string; notes_visible_to_patient?: boolean };
+      const consultation = await medicoService.saveConsultationSession(id, req.userId!, { notes, notes_visible_to_patient });
+      return res.json(consultation);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar sessão da consulta.';
+      logger.error('Erro ao salvar sessão da consulta médica', { message: msg, consultationId: req.params['id'], userId: req.userId });
+      return res.status(400).json({ error: msg });
+    }
+  },
+
+  async setAvailability(req: AuthRequest, res: Response) {
+    try {
+      const { available } = req.body as { available?: boolean };
+      const [updated] = await careQueueService.setAvailability(req.userId!, Boolean(available));
+      return res.json(updated);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar disponibilidade.';
+      logger.error('Erro ao atualizar disponibilidade do médico', { message: msg, userId: req.userId });
+      return res.status(500).json({ error: msg });
     }
   },
 

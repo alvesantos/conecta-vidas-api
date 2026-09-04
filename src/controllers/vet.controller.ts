@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { userService } from '../services/user.service';
 import { vetService } from '../services/vet.service';
+import { careQueueService } from '../services/careQueue.service';
 import { prescriptionService } from '../services/prescription.service';
 import { medicalRecordService } from '../services/medical_record.service';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
@@ -198,6 +199,18 @@ export const vetController = {
       const msg = err instanceof Error ? err.message : 'Erro ao atualizar dados financeiros.';
       logger.error('Erro ao atualizar dados financeiros do veterinário', { message: msg, userId: req.userId });
       res.status(400).json({ error: msg });
+    }
+  },
+
+  async setAvailability(req: AuthRequest, res: Response) {
+    try {
+      const { available } = req.body as { available?: boolean };
+      const [updated] = await careQueueService.setAvailability(req.userId!, Boolean(available));
+      res.json(updated);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar disponibilidade.';
+      logger.error('Erro ao atualizar disponibilidade do veterinário', { message: msg, userId: req.userId });
+      res.status(500).json({ error: msg });
     }
   },
 
