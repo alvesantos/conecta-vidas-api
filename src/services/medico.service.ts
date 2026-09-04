@@ -7,18 +7,13 @@ export const medicoService = {
       .where({ vet_id: medicoId, kind: 'humana', date: db.raw('CURRENT_DATE') })
       .count('* as count').first();
     
-    const week = await db('consultations')
-      .where({ vet_id: medicoId, kind: 'humana' })
-      .andWhereRaw("date >= CURRENT_DATE - INTERVAL '7 days'")
-      .count('* as count').first();
-
     const totalClients = await db('consultations')
-      .where({ vet_id: medicoId, kind: 'humana' })
+      .where({ vet_id: medicoId, kind: 'humana', status: 'realizada' })
       .countDistinct('tutor_id as count').first();
 
-    const pendingRecords = await db('consultations')
-      .where({ vet_id: medicoId, kind: 'humana', status: 'agendada' })
-      .andWhereRaw("date < CURRENT_DATE")
+    const pendingConsultations = await db('consultations')
+      .where({ vet_id: medicoId, kind: 'humana' })
+      .whereIn('status', ['agendada', 'confirmada'])
       .count('* as count').first();
 
     const recentConsultations = await db('consultations as c')
@@ -35,9 +30,8 @@ export const medicoService = {
     return {
       stats: {
         today: Number(today?.count || 0),
-        week: Number(week?.count || 0),
         totalClients: Number(totalClients?.count || 0),
-        pendingRecords: Number(pendingRecords?.count || 0),
+        pendingConsultations: Number(pendingConsultations?.count || 0),
       },
       recentConsultations: recentConsultations.map(c => ({
         id: c.id,
