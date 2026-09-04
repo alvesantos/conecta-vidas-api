@@ -7,6 +7,7 @@ import { db } from '../database/knex';
 import { contextFromPetId } from '../utils/clinicalContext';
 import { schedulingService } from '../services/scheduling.service';
 import { consultationEmailService } from '../services/consultationEmail.service';
+import { avulsoPaymentService } from '../services/avulsoPayment.service';
 
 export const consultationController = {
   async getVideoRoom(req: AuthRequest, res: Response) {
@@ -89,6 +90,19 @@ export const consultationController = {
       });
 
       void consultationEmailService.confirmation(consultation.id);
+
+      if (!quote.coveredByPlan && quote.price) {
+        try {
+          await avulsoPaymentService.chargeAvulso({
+            consultationId: consultation.id,
+            userId: req.userId!,
+            professionalId: professional_id || null,
+            grossAmount: quote.price,
+          });
+        } catch (err) {
+          logger.error('Falha ao processar pagamento avulso', { consultationId: consultation.id, message: err instanceof Error ? err.message : String(err) });
+        }
+      }
 
       res.status(201).json({ ...consultation, quote });
     } catch (err) {

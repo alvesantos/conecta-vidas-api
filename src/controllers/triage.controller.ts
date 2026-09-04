@@ -4,6 +4,7 @@ import { db } from '../database/knex';
 import logger from '../logger';
 import { planEntitlementService } from '../services/planEntitlement.service';
 import { logClinicalAccess } from '../services/clinicalAudit.service';
+import { avulsoPaymentService } from '../services/avulsoPayment.service';
 
 type TriageKind = 'humano' | 'veterinario';
 
@@ -121,6 +122,20 @@ export const triageController = {
         actorUserId: req.userId!, patientUserId: req.userId!, action: 'create',
         resourceType: 'quick_triage', resourceId: id, context: triage.kind,
       });
+
+      if (result.consultation && quote && !quote.coveredByPlan && quote.price) {
+        try {
+          await avulsoPaymentService.chargeAvulso({
+            consultationId: result.consultation.id,
+            userId: req.userId!,
+            professionalId: null, // ainda não atribuído nesta etapa da fila
+            grossAmount: quote.price,
+          });
+        } catch (err) {
+          logger.error('Falha ao processar pagamento avulso (pronto atendimento)', { consultationId: result.consultation.id, message: err instanceof Error ? err.message : String(err) });
+        }
+      }
+
       return res.json({
         ...result,
         symptoms,

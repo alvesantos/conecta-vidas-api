@@ -3,6 +3,7 @@ import { requireAuth } from '../middlewares/auth.middleware';
 import { patientController } from '../controllers/patient.controller';
 import { triageController } from '../controllers/triage.controller';
 import { queueController } from '../controllers/queue.controller';
+import { planCheckoutController } from '../controllers/planCheckout.controller';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.post('/triages/:id/complete', triageController.complete);
 router.get('/queue/:consultationId', queueController.status);
 router.get('/queue/:consultationId/events', queueController.events);
 router.post('/queue/:consultationId/leave', queueController.leave);
+router.post('/plans/:id/checkout', planCheckoutController.checkout);
 router.get('/medication-reminders', patientController.medicationReminders);
 router.post('/medication-reminders', patientController.createMedicationReminder);
 router.delete('/medication-reminders/:id', patientController.deleteMedicationReminder);
