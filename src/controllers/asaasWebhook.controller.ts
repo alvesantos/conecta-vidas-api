@@ -18,14 +18,15 @@ export const asaasWebhookController = {
     // de erro, o que pode duplicar processamento se a lógica não for idempotente.
     try {
       const event = req.body?.event as string | undefined;
-      const payment = req.body?.payment as { id?: string; value?: number } | undefined;
+      const payment = req.body?.payment as { id?: string; value?: number; externalReference?: string } | undefined;
+      const externalReference = payment?.externalReference;
 
-      if (payment?.id && event && CONFIRMED_EVENTS.has(event)) {
-        await planCheckoutService.activateByAsaasPaymentId(payment.id, payment.value ?? 0);
-      } else if (payment?.id && event && CANCELED_EVENTS.has(event)) {
-        await planCheckoutService.cancelByAsaasPaymentId(payment.id);
+      if (externalReference && payment?.id && event && CONFIRMED_EVENTS.has(event)) {
+        await planCheckoutService.activateByExternalReference(externalReference, payment.id, payment.value ?? 0);
+      } else if (externalReference && event && CANCELED_EVENTS.has(event)) {
+        await planCheckoutService.cancelByExternalReference(externalReference);
       } else {
-        logger.info('Webhook Asaas recebido sem ação mapeada', { event });
+        logger.info('Webhook Asaas recebido sem ação mapeada', { event, hasExternalReference: Boolean(externalReference) });
       }
 
       return res.status(200).json({ received: true });
