@@ -74,15 +74,15 @@ export const planCheckoutService = {
   },
 
   /**
-   * Chamado pelo webhook quando o pagamento é confirmado. `externalReference`
-   * é o id da assinatura local (setado na criação do checkout). Ativa a
-   * assinatura e cancela as demais ativas do usuário.
+   * Ativa a assinatura correspondente (se ainda não ativa) e cancela as demais
+   * ativas do usuário. `asaasPaymentId` é opcional — nem todo evento de
+   * confirmação carrega o id do pagamento (ver nota em `activateByCheckoutId`).
    */
-  async activateByExternalReference(externalReference: string, asaasPaymentId: string, paidValue: number) {
-    const subscription = await db('subscriptions').where({ id: externalReference }).first();
-    if (!subscription || subscription.status === 'active') return;
-
+  async _activate(subscription: { id: string; user_id: string }, asaasPaymentId: string | null, paidValue: number) {
     await db.transaction(async (trx) => {
+      const current = await trx('subscriptions').where({ id: subscription.id }).first();
+      if (!current || current.status === 'active') return;
+
       await trx('subscriptions')
         .where({ user_id: subscription.user_id, status: 'active' })
         .update({ status: 'canceled', canceled_at: trx.fn.now(), updated_at: trx.fn.now() });
@@ -93,7 +93,7 @@ export const planCheckoutService = {
       await trx('subscriptions').where({ id: subscription.id }).update({
         status: 'active',
         paid_value: paidValue,
-        asaas_payment_id: asaasPaymentId,
+        ...(asaasPaymentId ? { asaas_payment_id: asaasPaymentId } : {}),
         started_at: trx.fn.now(),
         expires_at: expiresAt,
         updated_at: trx.fn.now(),
@@ -101,7 +101,33 @@ export const planCheckoutService = {
     });
   },
 
-  /** Chamado pelo webhook quando o pagamento falha/expira antes de ser confirmado. */
+  /**
+   * Caminho principal: eventos CHECKOUT_PAID/CHECKOUT_CANCELED/CHECKOUT_EXPIRED
+   * carregam `checkout.id`, que guardamos como `asaas_checkout_id` na criação —
+   * casamento confiável, ao contrário de `payment.externalReference` (visto na
+   * prática NÃO propagar em todo pagamento gerado a partir de um checkout,
+   * mesmo a documentação da Asaas sugerindo que sim).
+   */
+  async activateByCheckoutId(checkoutId: string, paidValue: number) {
+    const subscription = await db('subscriptions').where({ asaas_checkout_id: checkoutId }).first();
+    if (!subscription) return;
+    await this._activate(subscription, null, paidValue);
+  },
+
+  async cancelByCheckoutId(checkoutId: string) {
+    await db('subscriptions')
+      .where({ asaas_checkout_id: checkoutId })
+      .whereIn('status', ['pending_payment'])
+      .update({ status: 'canceled', canceled_at: db.fn.now(), updated_at: db.fn.now() });
+  },
+
+  /** Caminho de reforço: usado quando o evento é de PAYMENT_* e o externalReference veio preenchido. */
+  async activateByExternalReference(externalReference: string, asaasPaymentId: string, paidValue: number) {
+    const subscription = await db('subscriptions').where({ id: externalReference }).first();
+    if (!subscription) return;
+    await this._activate(subscription, asaasPaymentId, paidValue);
+  },
+
   async cancelByExternalReference(externalReference: string) {
     await db('subscriptions')
       .where({ id: externalReference })
