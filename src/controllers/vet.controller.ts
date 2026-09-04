@@ -171,6 +171,36 @@ export const vetController = {
     }
   },
 
+  async updateFinanceiro(req: AuthRequest, res: Response) {
+    try {
+      const {
+        pix_type, pix_key,
+        bank_code, bank_name, bank_agency, bank_account_number,
+        bank_account_digit, bank_account_type,
+      } = req.body as Record<string, string>;
+
+      const validPixTypes = ['cpf', 'cnpj', 'email', 'telefone', 'aleatoria'];
+      if (pix_type && !validPixTypes.includes(pix_type)) {
+        return res.status(400).json({ error: 'Tipo de chave Pix inválido.' });
+      }
+      const validAccountTypes = ['corrente', 'poupanca'];
+      if (bank_account_type && !validAccountTypes.includes(bank_account_type)) {
+        return res.status(400).json({ error: 'Tipo de conta bancária inválido.' });
+      }
+
+      const profile = await vetService.updateFinanceiro(req.userId!, {
+        pix_type, pix_key,
+        bank_code, bank_name, bank_agency, bank_account_number,
+        bank_account_digit, bank_account_type,
+      });
+      res.json(profile);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao atualizar dados financeiros.';
+      logger.error('Erro ao atualizar dados financeiros do veterinário', { message: msg, userId: req.userId });
+      res.status(400).json({ error: msg });
+    }
+  },
+
   async getBalance(req: AuthRequest, res: Response) {
     try {
       const profile = await vetService.getVetProfile(req.userId!);

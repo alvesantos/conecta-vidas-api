@@ -252,6 +252,28 @@ export const vetService = {
       .first();
   },
 
+  async updateFinanceiro(vetId: string, data: Record<string, string | null>) {
+    const {
+      pix_type, pix_key,
+      bank_code, bank_name, bank_agency, bank_account_number,
+      bank_account_digit, bank_account_type,
+    } = data;
+
+    await db('users').where({ id: vetId }).update({
+      pix_type: pix_type ?? null,
+      pix_key: pix_key ?? null,
+      bank_code: bank_code ?? null,
+      bank_name: bank_name ?? null,
+      bank_agency: bank_agency ?? null,
+      bank_account_number: bank_account_number ?? null,
+      bank_account_digit: bank_account_digit ?? null,
+      bank_account_type: bank_account_type ?? null,
+      updated_at: db.fn.now(),
+    });
+
+    return this.getVetProfile(vetId);
+  },
+
   async changePassword(vetId: string, currentPassword: string, newPassword: string) {
     const bcrypt = await import('bcryptjs');
     const user = await db('users').where({ id: vetId }).first();

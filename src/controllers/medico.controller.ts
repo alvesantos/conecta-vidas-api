@@ -28,6 +28,36 @@ export const medicoController = {
     }
   },
 
+  async updateFinanceiro(req: AuthRequest, res: Response) {
+    try {
+      const {
+        pix_type, pix_key,
+        bank_code, bank_name, bank_agency, bank_account_number,
+        bank_account_digit, bank_account_type,
+      } = req.body as Record<string, string>;
+
+      const validPixTypes = ['cpf', 'cnpj', 'email', 'telefone', 'aleatoria'];
+      if (pix_type && !validPixTypes.includes(pix_type)) {
+        return res.status(400).json({ error: 'Tipo de chave Pix inválido.' });
+      }
+      const validAccountTypes = ['corrente', 'poupanca'];
+      if (bank_account_type && !validAccountTypes.includes(bank_account_type)) {
+        return res.status(400).json({ error: 'Tipo de conta bancária inválido.' });
+      }
+
+      const profile = await medicoService.updateFinanceiro(req.userId!, {
+        pix_type, pix_key,
+        bank_code, bank_name, bank_agency, bank_account_number,
+        bank_account_digit, bank_account_type,
+      });
+      return res.json(profile);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao atualizar dados financeiros.';
+      logger.error('Erro ao atualizar dados financeiros do médico', { message, userId: req.userId });
+      return res.status(400).json({ error: message });
+    }
+  },
+
   async changePassword(req: AuthRequest, res: Response) {
     try {
       const { current_password, new_password } = req.body as Record<string, string>;

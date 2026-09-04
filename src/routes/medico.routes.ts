@@ -9,6 +9,7 @@ router.use(requireMedico);
 router.get('/dashboard', medicoController.getDashboardStats);
 router.get('/profile', medicoController.getProfile);
 router.put('/password', medicoController.changePassword);
+router.put('/financeiro', medicoController.updateFinanceiro);
 router.get('/consultations', medicoController.listConsultations);
 router.get('/queue', queueController.humanList);
 router.post('/queue/:id/call', queueController.callHuman);

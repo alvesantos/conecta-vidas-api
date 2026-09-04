@@ -47,8 +47,35 @@ export const medicoService = {
     return db('users')
       .where({ id: medicoId })
       .whereIn('type', ['medico', 'admin'])
-      .select('id', 'name', 'cpf', 'email', 'phone', 'crm', 'status', 'created_at')
+      .select(
+        'id', 'name', 'cpf', 'email', 'phone', 'crm', 'status', 'created_at',
+        'pix_type', 'pix_key',
+        'bank_code', 'bank_name', 'bank_agency', 'bank_account_number',
+        'bank_account_digit', 'bank_account_type',
+      )
       .first();
+  },
+
+  async updateFinanceiro(medicoId: string, data: Record<string, string | null>) {
+    const {
+      pix_type, pix_key,
+      bank_code, bank_name, bank_agency, bank_account_number,
+      bank_account_digit, bank_account_type,
+    } = data;
+
+    await db('users').where({ id: medicoId }).update({
+      pix_type: pix_type ?? null,
+      pix_key: pix_key ?? null,
+      bank_code: bank_code ?? null,
+      bank_name: bank_name ?? null,
+      bank_agency: bank_agency ?? null,
+      bank_account_number: bank_account_number ?? null,
+      bank_account_digit: bank_account_digit ?? null,
+      bank_account_type: bank_account_type ?? null,
+      updated_at: db.fn.now(),
+    });
+
+    return this.getProfile(medicoId);
   },
 
   async changePassword(medicoId: string, currentPassword: string, newPassword: string) {
